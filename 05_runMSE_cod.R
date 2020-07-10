@@ -40,20 +40,22 @@ for(i in 1:3) {
   message("Running NR ", i)
   
   if(1 %in% run_test) {
-    MSE <- runMSE(SRA_OM@OM, MPs = c("M02", "M02_ra", "MRAMP", "MRAMP_ra"), parallel = TRUE)
+    MSE <- runMSE(SRA_OM@OM, MPs = c("M02", "M02_ra", "MRAMP", "MRAMP_ra"), parallel = TRUE,
+                  save_name = paste0("prelim_t1_NR", i))
     
     message("Finished with NR ", i, " Test 1")
     
-    saveRDS(MSE, file = paste0("GoM_cod/MSE_cod_t1_NR", i, ".rds"), save_name = paste0("prelim_t1_NR", i))
+    saveRDS(MSE, file = paste0("GoM_cod/MSE_cod_t1_NR", i, ".rds"))
     rm(MSE)
   }
   
   if(2 %in% run_test) {
-    MSE <- runMSE(SRA_OM@OM, MPs = c("ma", "NFref", "FMSYref"), parallel = TRUE)
+    MSE <- runMSE(SRA_OM@OM, MPs = c("ma", "NFref", "FMSYref"), parallel = TRUE,
+                  save_name = paste0("prelim_t2_NR", i))
     
     message("Finished with NR ", i, " Test 2")
     
-    saveRDS(MSE, file = paste0("GoM_cod/MSE_cod_t2_NR", i, ".rds"), save_name = paste0("prelim_t2_NR", i))
+    saveRDS(MSE, file = paste0("GoM_cod/MSE_cod_t2_NR", i, ".rds"))
     rm(MSE) 
   }
   

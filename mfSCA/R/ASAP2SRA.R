@@ -1,6 +1,6 @@
 
 #' @export
-ASAP2SRA <- function(file = "GoM_cod/GOM_COD_2019_UPDATE_M02.dat", 
+ASAP2SRA <- function(file = "ASAP/GOM_COD_2019_UPDATE_M02.dat", 
                      proyears = 50, nsim = 2, interval = 3, WAA_pointer = 2, discards = FALSE,
                      condition = "catch2") {
   out <- ASAPplots::ReadASAP3DatFile(file)
@@ -212,3 +212,103 @@ get_haddock <- function(nsim = 2, h = 0.99) {
   args$map_s_vul_par <- m_sel_par
   return(args)
 }
+
+
+pollock_cleanup <- function(args) {
+  prop_rel <- args[[2]]
+  args <- args[[1]]
+  
+  data <- args$data
+  data$CAA[is.na(data$CAA)] <- 0
+  new_data <- args$data
+  new_data$Chist <- cbind(rowSums(data$Chist[, c(1, 3)]), rowSums(data$Chist[, c(2, 4)]))
+  new_data$sel_block <- data$sel_block[, 1:2]
+  
+  new_CAA <- array(dim = c(49, 9, 4))
+  new_data$CAA <- array(dim = c(49, 9, 2))
+  for(i in 1:2) {
+    N_eff <- apply(data$CAA[,,c(i, i+2)], 1, sum)
+    
+    expansion_factors <- data$Chist[, i]/rowSums((data$CAA[,,i] * t(args$OM@cpars$Wt_age[1,,1:49])))
+    expansion_factors[is.infinite(expansion_factors) | is.na(expansion_factors)] <- 0
+    new_CAA[,,i] <- data$CAA[,,i] * expansion_factors
+    
+    expansion_factors <- data$Chist[, i+2]/rowSums((data$CAA[,,i+2] * t(args$OM@cpars$Wt_age[1,,1:49])))
+    expansion_factors[is.infinite(expansion_factors) | is.na(expansion_factors)] <- 0
+    new_CAA[,,i+2] <- data$CAA[,,i+2] * expansion_factors
+    
+    new_data$CAA[,,i] <- new_CAA[,,i] + new_CAA[,,i+2]
+    new_data$CAA[,,i] <- new_data$CAA[,,i] / rowSums(new_data$CAA[,,i]) * N_eff
+  }
+  args$data <- new_data
+  return(args)
+}
+
+#' @export
+get_pollock_base <- function(nsim = 2, h = 0.99) {
+  args <- ASAP2SRA("ASAP/2019_POK_UNIT_MOD_BaseASAPInput.dat", nsim = nsim, discards = TRUE) %>% pollock_cleanup()
+  args$OM@h <- rep(h, 2)
+  
+  vul_par <- matrix(NA, 9, 8)
+  vul_par[, 1] <- c(0.2, 0.3, 0.4, 0.8, rep(0.99999, 2), 0.8, 0.7, 0.6)
+  vul_par[, 2:5] <- c(0.2, 0.3, 0.4, 0.8, 0.9, rep(0.99999, 2), 0.7, 0.6)
+  vul_par[, 6:8] <- c(4, 2, 0.5)
+  
+  args$vul_par <- vul_par
+  
+  map_vul_par <- matrix(NA, 9, 8)
+  map_vul_par[c(1:5, 7:9), 1] <- 1:8
+  map_vul_par[c(1:6, 8:9), 2:5] <- 9:40
+  map_vul_par[1:3, 6:8] <- 41:49
+  
+  args$map_vul_par <- map_vul_par
+  
+  sel_par <- list(c(0.4, 0.5, 0.6, 0.7, 0.85, rep(0.99999, 3), 0.5),
+                  c(0.6, 0.9, rep(0.99999, 6), 0.5)) %>% unlist() %>% matrix(9, 2)
+  
+  args$s_vul_par <- sel_par
+  
+  m_sel_par <- matrix(NA, 9, 2)
+  m_sel_par[c(1:5, 8), 1] <- 1:6
+  m_sel_par[c(1:5, 8), 2] <- 7:12
+  
+  args$map_s_vul_par <- m_sel_par
+  
+  args$data$Chist[args$data$Chist <= 0] <- 1e-8
+  return(args)
+}
+
+
+#' @export
+get_pollock_flatsel <- function(nsim = 2, h = 0.99) {
+  args <- ASAP2SRA("ASAP/2019_POK_UNIT_MOD_FlatSelASAPInput.dat", nsim = nsim, discards = TRUE) %>% pollock_cleanup()
+  args$OM@h <- rep(h, 2)
+  
+  vul_par <- matrix(NA, 9, 8)
+  vul_par[, 1] <- c(0.2, 0.3, 0.4, 0.8, rep(0.99999, 2), 0.8, 0.7, 0.6)
+  vul_par[, 2:5] <- c(0.2, 0.3, 0.4, 0.8, 0.9, rep(0.99999, 2), 0.7, 0.6)
+  vul_par[, 6:8] <- c(4, 2, 0.5)
+  
+  args$vul_par <- vul_par
+  
+  map_vul_par <- matrix(NA, 9, 8)
+  map_vul_par[c(1:5, 7:9), 1] <- 1:8
+  map_vul_par[c(1:6, 8:9), 2:5] <- 9:40
+  map_vul_par[1:3, 6:8] <- 41:49
+  
+  args$map_vul_par <- map_vul_par
+  
+  sel_par <- list(c(0.4, 0.5, 0.6, 0.7, 0.85, rep(0.99999, 4)),
+                  c(0.6, 0.9, rep(0.99999, 7))) %>% unlist() %>% matrix(9, 2)
+  
+  args$s_vul_par <- sel_par
+  
+  m_sel_par <- matrix(NA, 9, 2)
+  m_sel_par[1:5, ] <- 1:10
+  
+  args$map_s_vul_par <- m_sel_par
+  
+  args$data$Chist[args$data$Chist <= 0] <- 1e-8
+  return(args)
+}
+

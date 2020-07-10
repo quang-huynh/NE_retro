@@ -217,12 +217,3 @@ NR3 <- sfClusterApplyLB(5, eval_retro, type = "M2", args = args)
 saveRDS(NR3[[1]][[1]], file = "GoM_cod/SRA_NR3.rds")
 
 
-
-# M profile
-args <- get_cod_M02(h = 0.81)
-M_prof <- seq(0.1, 1, 0.1)
-ret_M_prof <- sfClusterApplyLB(M_prof, eval_retro, type = "highM", args = args)
-
-rho <- vapply(ret_M_prof, function(xx) summary(xx[[2]])[2, 1], numeric(1))
-plot(M_prof, rho)
-

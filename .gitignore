@@ -3,8 +3,7 @@
 .RData
 .Ruserdata
 ASAPexecutables
-*.dat
-*.csv
+*.pdf
 *.xlsx
 GB_haddock
 report

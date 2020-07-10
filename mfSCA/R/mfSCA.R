@@ -99,7 +99,7 @@ mf_SCA <- function(x = 1, Data, args = list(), R_proxy = expression(median(SRA_o
         array(c(data$nyears, Data@MaxAge, 1))
     }
   }
-  SRA_out <- MSEtool:::SRA_scope_est(x, data, args$selectivity, args$s_selectivity, 
+  SRA_out <- MSEtool:::SRA_scope_est(x = x, data = data, selectivity = args$selectivity, s_selectivity = args$s_selectivity, 
                                      ESS = args$ESS, LWT = args$LWT, StockPars = args$StockPars, FleetPars = args$FleetPars,
                                      ObsPars = list(Isd = rep(0.1, nrow(data$Chist))), dots = args$dots)
   
@@ -118,7 +118,7 @@ mf_SCA <- function(x = 1, Data, args = list(), R_proxy = expression(median(SRA_o
       map2[abs(SRA_out$report$s_vul_par[, args$s_selectivity == -2]) >= 7] <- NA
       args$dots$map_s_vul_par[, args$s_selectivity == -2] <- map2
     }
-    SRA_out <- MSEtool:::SRA_scope_est(x, data, args$I_type, args$selectivity, args$s_selectivity, 
+    SRA_out <- MSEtool:::SRA_scope_est(x = x, data = data, selectivity = args$selectivity, s_selectivity = args$s_selectivity, 
                                        ESS = args$ESS, LWT = args$LWT, StockPars = args$StockPars, FleetPars = args$FleetPars,
                                        ObsPars = list(Isd = rep(0.1, nrow(data$Chist))), dots = args$dots)
   }
