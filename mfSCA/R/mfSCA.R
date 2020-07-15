@@ -139,8 +139,11 @@ mf_SCA <- function(x = 1, Data, args = list(), R_proxy = expression(median(SRA_o
   
   Dev <- structure(c(rev(SRA_out$report$log_early_rec_dev), SRA_out$report$log_rec_dev), names = YearDev)
   
-  Assessment <- new("Assessment", Model = "mf_SCA", Name = Data@Name, 
-                    conv = !is.character(SRA_out$SD) && SRA_out$SD$pdHess,
+  conv <- FALSE
+  if(!is.character(SRA_out$SD)) {
+    if(SRA_out$SD$pdHess || max(abs(SRA_out$SD$gradient.fixed <= 0.1))) conv <- TRUE
+  }
+  Assessment <- new("Assessment", Model = "mf_SCA", Name = Data@Name, conv = conv,
                     h = SRA_out$report$h, FMort = structure(F_out, names = Year),
                     B = structure(SRA_out$report$B, names = Yearplusone),
                     SSB = structure(SRA_out$report$E, names = Yearplusone),

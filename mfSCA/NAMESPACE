@@ -2,6 +2,7 @@
 
 export(ASAP2SRA)
 export(EM_stock_status)
+export(calc_refpt)
 export(create_MP)
 export(generate_EM_args)
 export(generate_OM_args)
