@@ -3,14 +3,9 @@ library(dplyr)
 library(mfSCA)
 library(ggplot2)
 
-# Calc OM ref points with M = 0.02
-M02_refpt <- function(sra, M = c("M02", "true"), med_rec = 1) {
-  M <- match.arg(M)
-  if(M == "M02") {
-    M_ageArray <- array(0.2, dim(sra@OM@cpars$Wt_age))
-  } else {
-    M_ageArray <- sra@OM@cpars$M_ageArray
-  }
+# Calc OM ref points with M = 0.2
+M02_refpt <- function(sra, med_rec = 1) {
+  M_ageArray <- sra@OM@cpars$M_ageArray
   
   ref_out <- lapply(1:sra@OM@nsim, mfSCA:::optMSY, 
                     M_ageArray = M_ageArray, Wt_age = sra@OM@cpars$Wt_age, Mat_age = sra@OM@cpars$Mat_age,
@@ -79,12 +74,9 @@ M02_refpt <- function(sra, M = c("M02", "true"), med_rec = 1) {
   return(out)
 }
 
-SRA <- lapply(1:3, function(i) readRDS(paste0("GoM_cod/SRA_NR", i, ".rds")))
+SRA <- lapply(1:3, function(i) readRDS(paste0("pollock/SRA_NR", i, ".rds")))
 med_rec <- vapply(SRA, function(i) quantile(i@mean_fit$report$R, 0.75), numeric(1))
-
-#ref_pt <- lapply(1:3, function(i) M02_refpt(SRA[[i]], med_rec = med_rec[i]))
-ref_pt_M02 <- lapply(1:3, function(i) M02_refpt(SRA[[i]], med_rec = med_rec[i]))
-ref_pt_newM <- lapply(1:3, function(i) M02_refpt(SRA[[i]], M = "true", med_rec = med_rec[i]))
+ref_pt <- lapply(1:3, function(i) M02_refpt(SRA[[i]], med_rec = med_rec[i]))
 
 
 
@@ -180,8 +172,10 @@ ggplot(res[[3]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(OM ~ 
 ggsave("MSE/cod/OM_C.png", height = 3.5, width = 6.5)
 
 
-res <- plot_Index(MSE, MPs = c("M02", "ma"), ind.names = c("Spring", "Fall", "MA"))
+res <- plot_Index(MSE, MPs = c("M02", "M02_ra", "MRAMP", "MRAMP_ra", "ma"), 
+                  ind.names = c("Spring", "Fall", "MA"))
 
+res
 summary(MSE[[1]])
 
 

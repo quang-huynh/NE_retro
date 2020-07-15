@@ -20,9 +20,9 @@ for(i in 1:3) {
     generate_OM_args(AddInd_from_residuals = FALSE, AC_from_residuals = TRUE, Cobs = 0.05)
   
   args_base <- get_pollock_base(nsim = SRA_OM@OM@nsim) %>% 
-    generate_EM_args(SRA_EM = SRA_base)
+    generate_EM_args(SRA_EM = SRA_base, SRA_OM = SRA_OM)
   args_flatsel <- get_pollock_flatsel(nsim = SRA_OM@OM@nsim) %>% 
-    generate_EM_args(SRA_EM = SRA_flatsel)
+    generate_EM_args(SRA_EM = SRA_flatsel, SRA_OM = SRA_OM)
   
   # Current models with and without rho adjust
   base <- create_MP(args_base)
@@ -39,7 +39,7 @@ for(i in 1:3) {
   
   if(1 %in% run_test) {
     MSE <- runMSE(SRA_OM@OM, MPs = c("base", "base_ra", "flatsel", "flatsel_ra"), parallel = TRUE,
-                  save_name = paste0("prelim_t1_NR", i))
+                  save_name = paste0("pollock/prelim_t1_NR", i))
     
     message("Finished with NR ", i, " Test 1")
     
@@ -49,11 +49,11 @@ for(i in 1:3) {
   
   if(2 %in% run_test) {
     MSE <- runMSE(SRA_OM@OM, MPs = c("ma", "NFref", "FMSYref"), parallel = TRUE, 
-                  save_name = paste0("prelim_t2_NR", i))
+                  save_name = paste0("pollock/prelim_t2_NR", i))
     
     message("Finished with NR ", i, " Test 2")
     
-    saveRDS(MSE, file = paste0("GoM_cod/MSE_pollock_t2_NR", i, ".rds"))
+    saveRDS(MSE, file = paste0("pollock/MSE_pollock_t2_NR", i, ".rds"))
     rm(MSE) 
   }
   

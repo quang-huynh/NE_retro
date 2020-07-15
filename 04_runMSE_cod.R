@@ -62,3 +62,11 @@ for(i in 1:3) {
 }
 sfStop()
 
+##### Merge MSE
+out <- list()
+for(i in 1:3) {
+  out[[1]] <- readRDS(paste0("GoM_cod/MSE_cod_t1_NR", i, ".rds"))
+  out[[2]] <- readRDS(paste0("GoM_cod/MSE_cod_t2_NR", i, ".rds"))
+  res <- do.call(merge_MSE, out)
+  saveRDS(res, file = paste0("GoM_cod/MSE_cod_NR", i, ".rds"))
+}

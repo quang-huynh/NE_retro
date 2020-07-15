@@ -10,12 +10,14 @@ sfLibrary(mfSCA)
 ### Test 1: no/rho adjust current EMs (cod M02 and MRAMP) 
 
 SRA_base <- readRDS("GoM_haddock/SRA_haddock_sel9.rds")
-args_base <- get_haddock(nsim = SRA_OM@OM@nsim) %>% generate_EM_args(SRA_EM = SRA_base)
 
 for(i in 1:3) {
   SRA_OM <- readRDS(paste0("GoM_haddock/SRA_NR", i, ".rds")) %>% 
     generate_OM_args(AddInd_from_residuals = FALSE, AC_from_residuals = TRUE, Cobs = 0.05)
   SRA_OM@OM@cpars$Data@AddInd <- SRA_base@OM@cpars$Data@AddInd
+  SRA_OM@OM@cpars$Data@CV_AddInd <- SRA_base@OM@cpars$Data@CV_AddInd
+  
+  args_base <- get_haddock(nsim = SRA_OM@OM@nsim) %>% generate_EM_args(SRA_EM = SRA_base)
   
   # Current models with and without rho adjust
   base <- create_MP(args_base)
