@@ -12,8 +12,8 @@ sfLibrary(mfSCA)
 ### Test 3: incorrect EM 
 run_test <- c(1, 2)
 
-SRA_base <- readRDS("GoM_cod/SRA_pollock_base.rds")
-SRA_flatsel <- readRDS("GoM_cod/SRA_pollock_flatsel.rds")
+SRA_base <- readRDS("pollock/SRA_pollock_base.rds")
+SRA_flatsel <- readRDS("pollock/SRA_pollock_flatsel.rds")
 
 for(i in 1:3) {
   SRA_OM <- readRDS(paste0("pollock/SRA_NR", i, ".rds")) %>% 
@@ -59,4 +59,14 @@ for(i in 1:3) {
   
 }
 sfStop()
+
+##### Merge MSE
+out <- list()
+for(i in 1:3) {
+  out[[1]] <- readRDS(paste0("pollock/MSE_pollock_t1_NR", i, ".rds"))
+  out[[2]] <- readRDS(paste0("pollock/MSE_pollock_t2_NR", i, ".rds"))
+  res <- do.call(merge_MSE, out)
+  saveRDS(res, file = paste0("pollock/MSE_pollock_NR", i, ".rds"))
+}
+
 
