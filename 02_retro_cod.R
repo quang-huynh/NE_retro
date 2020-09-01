@@ -206,14 +206,14 @@ plot(apply(Mramp, 2, max), rho, xlab = "maximum M", ylab = "SSB Mohn's rho", pch
 abline(h = 0, lty = 2)
 dev.off()
 
-plot(ret_M[[5]][[1]], retro = ret_M[[5]][[2]], file = "report/GoM_cod/NR3", 
+plot(ret_M[[4]][[1]], retro = ret_M[[5]][[2]], file = "report/GoM_cod/NR3", 
      title = "GM cod MRAMP to 0.45", 
      dir = getwd(), s_name = c("NEFSCspring", "NEFSCfall", "MAspring"), open_file = FALSE)
 
 ##### Generate OM
 args <- get_cod_MRAMP(nsim = 100, h = 0.81)
 sfExport(list = "args")
-NR3 <- sfClusterApplyLB(5, eval_retro, type = "M2", args = args)
+NR3 <- sfClusterApplyLB(4, eval_retro, type = "M2", args = args)
 saveRDS(NR3[[1]][[1]], file = "GoM_cod/SRA_NR3.rds")
 
 
