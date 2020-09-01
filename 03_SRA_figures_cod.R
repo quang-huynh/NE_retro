@@ -24,11 +24,13 @@ RR <- cbind %>% do.call(lapply(list(res1, res2, res3, res4, res5), function(x) x
 png("report/GoM_cod/SSB_R.png", height = 6, width = 5, units = "in", res = 400)
 par(mar = c(2, 4, 1, 1), oma = c(2, 0, 0, 0), mfrow = c(2, 1))
 
-matplot(1982:2019, RR, ylab = "Recruitment", xlab = "Year", type = "l", lty = 1, lwd = 2, ylim = c(0, 50000))
+matplot(1982:2019, RR, ylab = "Recruitment", xlab = "Year", xlim = c(1980, 2020), type = "l", lty = c(3, 3, 1, 1, 1), 
+        col = c(1, 3, 4, 5, 2), lwd = 2, ylim = c(0, 50000))
 abline(h = 0, col = "grey")
-legend("topright", c("M02", "MRAMP", "NR1", "NR2", "NR3"), pch = 16, col = 1:5)
+legend("topright", c("M02", "MRAMP", "NR1", "NR2", "NR3"), col = c(1, 3, 4, 5, 2), lwd = 2, lty = c(3, 3, 1, 1, 1))
 
-matplot(1982:2019, SSB, xlab = "Year", type = "l", lty = 1, lwd = 2, ylim = c(0, 60000))
+matplot(1982:2019, SSB, xlab = "Year", xlim = c(1980, 2020), type = "l", lty = c(3, 3, 1, 1, 1), 
+        col = c(1, 3, 4, 5, 2), lwd = 2, ylim = c(0, 60000))
 abline(h = 0, col = "grey")
 
 mtext("Year", side = 1, outer = TRUE, line = 1)
@@ -44,11 +46,11 @@ png("report/GoM_cod/cod_OM_rho.png", height = 4, width = 6.5, units = "in", res 
 par(mfcol = c(2, 3), mar = c(4, 4, 1, 1))
 for(i in 1:3) {
   matplot(1982:2019, rr[[i]]@TS[, , 1] %>% t(), type = 'l', col = gplots::rich.colors(7), lty = 1, ylim = c(0, 3), 
-          xlab = "Year", ylab = "F")
+          xlim = c(1980, 2020), xlab = "Year", ylab = "F")
   abline(h = 0, col = "grey")
   legend("topleft", c(paste0("NR", i), latex2exp::TeX(paste0("$\\rho = ", summary(rr[[i]])[1,1], "$"))), bty = "n")
   matplot(1982:2019, rr[[i]]@TS[, , 2] %>% t(), type = 'l', col = gplots::rich.colors(7), lty = 1, ylim = c(0, 6e4), 
-          xlab = "Year", ylab = "SSB")
+          xlim = c(1980, 2020), xlab = "Year", ylab = "SSB")
   abline(h = 0, col = "grey")
   legend("topleft", c(paste0("NR", i), latex2exp::TeX(paste0("$\\rho = ", summary(rr[[i]])[2,1], "$"))), bty = "n")
 }
@@ -64,11 +66,11 @@ png("report/GoM_cod/cod_EM_rho.png", height = 4, width = 2 * 6.5 / 3, units = "i
 par(mfcol = c(2, 2), mar = c(4, 4, 1, 1))
 for(i in 1:2) {
   matplot(1982:2019, rr[[i]]@TS[, , 1] %>% t(), type = 'l', col = gplots::rich.colors(7), lty = 1, ylim = c(0, 3), 
-          xlab = "Year", ylab = "F")
+          xlim = c(1980, 2020), xlab = "Year", ylab = "F")
   abline(h = 0, col = "grey")
   legend("topleft", c(EM[i], latex2exp::TeX(paste0("$\\rho = ", summary(rr[[i]])[1,1], "$"))), bty = "n")
   matplot(1982:2019, rr[[i]]@TS[, , 2] %>% t(), type = 'l', col = gplots::rich.colors(7), lty = 1, ylim = c(0, 6e4), 
-          xlab = "Year", ylab = "SSB")
+          xlim = c(1980, 2020), xlab = "Year", ylab = "SSB")
   abline(h = 0, col = "grey")
   legend("topleft", c(EM[i], latex2exp::TeX(paste0("$\\rho = ", summary(rr[[i]])[2,1], "$"))), bty = "n")
 }

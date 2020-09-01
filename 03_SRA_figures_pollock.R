@@ -25,15 +25,15 @@ RR <- cbind %>% do.call(lapply(list(res1, res2, res3, res4, res5), function(x) x
 png("report/pollock/SSB_R.png", height = 6, width = 5, units = "in", res = 400)
 par(mar = c(2, 4, 1, 1), oma = c(2, 0, 0, 0), mfrow = c(2, 1))
 
-matplot(1970:2019, SSB, xlab = "Year", type = "l", lty = 1, lwd = 2, ylim = c(0, 1e6))
+matplot(1970:2019, SSB, xlab = "Year", type = "l", col = c(1, 3, 4, 5, 2), lty = c(3, 3, 1, 1, 1), lwd = 2, ylim = c(0, 1e6))
 abline(h = 0, col = "grey")
-#legend("topleft", c("Base", "FlatSel", "NR1", "NR2", "NR3"), pch = 16, col = 1:5)
+legend("top", c("Base", "FlatSel", "NR1", "NR2", "NR3"), col = c(1, 3, 4, 5, 2), lty = c(3, 3, 1, 1, 1), lwd = 2)
 
-matplot(1970:2019, RR, ylab = "Recruitment", xlab = "Year", type = "l", lty = 1, lwd = 2, 
-        ylim = c(0, 1.1 * max(RR)))
+matplot(1970:2019, RR, ylab = "Recruitment", xlab = "Year", type = "l", lty = c(3, 3, 1, 1, 1), lwd = 2, 
+        col = c(1, 3, 4, 5, 2), ylim = c(0, 1.1 * max(RR)))
 abline(h = 0, col = "grey")
-legend("topleft", c("Base", "FlatSel", "NR1", "NR2", "NR3"), pch = 16, col = 1:5)
 
+mtext("Year", outer = TRUE, side = 1, line = 1)
 dev.off()
 
 
