@@ -10,7 +10,7 @@ sfLibrary(mfSCA)
 ### Test 1: no/rho adjust current EMs (cod M02 and MRAMP) 
 ### Test 2: model averaging them
 ### Test 3: incorrect EM 
-run_test <- c(1, 2)
+run_test <- 4
 
 SRA_M02 <- readRDS("GoM_cod/SRA_cod_M02.rds")
 SRA_MRAMP <- readRDS("GoM_cod/SRA_cod_MRAMP.rds")
@@ -59,14 +59,49 @@ for(i in 1:3) {
     rm(MSE) 
   }
   
+  if(3 %in% run_test) {
+    SRA_OM@OM@qcv <- SRA_OM@OM@qinc <- c(0, 0)
+    Eff <- seq(0.5, 3, 0.25)
+    EffMP <- paste0("FMSY", Eff)
+    
+    FMSY <- readRDS("GoM_cod/cod_ref_pt.rds")[[2]][[i]][1, 1] %>% as.numeric()
+    Map(function(x, y) assign(y, generate_Eff_MP(x, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears]), 
+                              envir = globalenv()), x = Eff, y = EffMP)
+    sfExport(list = EffMP)
+    
+    MSE <- runMSE(SRA_OM@OM, MPs = EffMP, parallel = TRUE)
+    
+    message("Finished with NR ", i, " Test 3")
+    
+    saveRDS(MSE, file = paste0("GoM_cod/MSE_cod_t3_NR", i, ".rds"))
+    rm(MSE)
+  }
+  
+  if(4 %in% run_test) {
+    SRA_OM@OM@qcv <- SRA_OM@OM@qinc <- c(0, 0)
+    
+    FMSY <- readRDS("GoM_cod/cod_ref_pt.rds")[[2]][[i]][1, 1] %>% as.numeric()
+    `75%FMSY` <- generate_Eff_MP_with_EM(0.75, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears], 
+                                         args = args_M02, args2 = args_MRAMP)
+    
+    sfExport(list = "75%FMSY")
+    MSE <- runMSE(SRA_OM@OM, MPs = c("75%FMSY", "FMSYref75"), parallel = TRUE)
+    message("Finished with NR ", i, " Test 4")
+    
+    saveRDS(MSE, file = paste0("GoM_cod/MSE_cod_t4_NR", i, ".rds"))
+    rm(MSE)
+  }
+  
 }
 sfStop()
 
 ##### Merge MSE
 out <- list()
 for(i in 1:3) {
-  out[[1]] <- readRDS(paste0("GoM_cod/MSE_cod_t1_NR", i, ".rds"))
-  out[[2]] <- readRDS(paste0("GoM_cod/MSE_cod_t2_NR", i, ".rds"))
+  out[[1]] <- readRDS(paste0("GoM_cod/MSE_cod_NR", i, ".rds"))
+  out[[2]] <- readRDS(paste0("GoM_cod/MSE_cod_t4_NR", i, ".rds"))
+  out[[1]]@OM$qinc <- out[[1]]@OM$qcv <- 0
+  out[[2]]@Obs <- out[[1]]@Obs
   res <- do.call(merge_MSE, out)
   saveRDS(res, file = paste0("GoM_cod/MSE_cod_NR", i, ".rds"))
 }

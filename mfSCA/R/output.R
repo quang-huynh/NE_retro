@@ -90,7 +90,10 @@ EM_stock_status <- function(MSE, MP = NULL, model_index = 1) {
   }
   
   out <- lapply(out_names, function(x) {
-    rbind %>% do.call(lapply(Misc, get_n_models, y = x)) %>% structure(dimnames = list(1:length(Misc), Yr))
+    metric <- lapply(Misc, get_n_models, y = x)
+    if(!is.null(metric[[1]])) {
+      do.call(rbind, metric) %>% structure(dimnames = list(1:length(Misc), Yr))
+    } else return(NULL)
   }) %>% structure(names = out_names)
   
   return(out)
@@ -104,14 +107,23 @@ plot_EM <- function(MSE, MPs = c("cod_M02", "cod_M02_ra", "cod_MRAMP", "cod_MRAM
     res <- lapply(MPs, function(x) {
       output <- mfSCA::EM_stock_status(mse, x, model_index = model_index) %>% 
         lapply(function(xx) {
-          apply(xx, 2, quantile, probs = probs, na.rm = TRUE) %>% 
-            t() %>% as.data.frame() %>% mutate(Year = as.numeric(rownames(.)) + mse@OM$CurrentYr[1] - mse@nyears, MP = x)
+          if(is.null(xx)) {
+            return(NULL)
+          } else {
+            apply(xx, 2, quantile, probs = probs, na.rm = TRUE) %>% 
+              t() %>% as.data.frame() %>% mutate(Year = as.numeric(rownames(.)) + mse@OM$CurrentYr[1] - mse@nyears, MP = x)
+          }
         })
       return(output)
     })
     
     res2 <- lapply(c("F_FMSY", "B_BMSY", "rho"), function(x) {
-      do.call(rbind, lapply(res, getElement, x)) %>% mutate(OM = paste0("NR", i))
+      out <- do.call(rbind, lapply(res, getElement, x))
+      if(is.null(out)) {
+        return(NULL)
+      } else {
+        return(mutate(out, OM = paste0("NR", i)))
+      }
     }) %>% structure(names = c("F_FMSY", "B_BMSY", "rho"))
     
     return(res2)
