@@ -9,8 +9,10 @@ sfLibrary(mfSCA)
 ### Status quo - model average M02 and MRAMP
 ### Test 1: no/rho adjust current EMs (cod M02 and MRAMP) 
 ### Test 2: model averaging them
-### Test 3: incorrect EM 
-run_test <- 4
+### Test 3: ref MP with no indicators
+### Test 4: ref MP with indicators
+### Test 5: tuning MP
+run_test <- 5
 
 SRA_M02 <- readRDS("GoM_cod/SRA_cod_M02.rds")
 SRA_MRAMP <- readRDS("GoM_cod/SRA_cod_MRAMP.rds")
@@ -82,7 +84,7 @@ for(i in 1:3) {
     
     FMSY <- readRDS("GoM_cod/cod_ref_pt.rds")[[2]][[i]][1, 1] %>% as.numeric()
     `75%FMSY` <- generate_Eff_MP_with_EM(0.75, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears], 
-                                         args = args_M02, args2 = args_MRAMP)
+                                         args = args_M02, assess = FALSE)
     
     sfExport(list = "75%FMSY")
     MSE <- runMSE(SRA_OM@OM, MPs = c("75%FMSY", "FMSYref75"), parallel = TRUE)
@@ -92,16 +94,35 @@ for(i in 1:3) {
     rm(MSE)
   }
   
+  if(5 %in% run_test) {
+    SRA_OM@OM@qcv <- SRA_OM@OM@qinc <- c(0, 0)
+    
+    FMSY <- readRDS("GoM_cod/cod_ref_pt.rds")[[2]][[i]][1, 1] %>% as.numeric()
+    
+    set.seed(421)
+    relF <- runif(SRA_OM@OM@nsim, 0.25, 3)
+    tuning_MP <- generate_Eff_MP_with_EM(relF, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears], 
+                                         args = args_M02, assess = FALSE)
+    
+    sfExport(list = "tuning_MP")
+    MSE <- runMSE(SRA_OM@OM, MPs = "tuning_MP", parallel = TRUE)
+    message("Finished with NR ", i, " Test 5")
+    
+    saveRDS(MSE, file = paste0("GoM_cod/MSE_cod_tuningMP_NR", i, ".rds"))
+    rm(MSE)
+  }
+  
 }
 sfStop()
 
 ##### Merge MSE
-out <- list()
-for(i in 1:3) {
-  out[[1]] <- readRDS(paste0("GoM_cod/MSE_cod_NR", i, ".rds"))
-  out[[2]] <- readRDS(paste0("GoM_cod/MSE_cod_t4_NR", i, ".rds"))
-  out[[1]]@OM$qinc <- out[[1]]@OM$qcv <- 0
-  out[[2]]@Obs <- out[[1]]@Obs
-  res <- do.call(merge_MSE, out)
-  saveRDS(res, file = paste0("GoM_cod/MSE_cod_NR", i, ".rds"))
-}
+#out <- list()
+#for(i in 1:3) {
+#  out[[1]] <- readRDS(paste0("GoM_cod/MSE_cod_NR", i, ".rds"))
+#  out[[2]] <- readRDS(paste0("GoM_cod/MSE_cod_t4_NR", i, ".rds"))
+#  out[[1]]@OM$qinc <- out[[1]]@OM$qcv <- 0
+#  out[[2]]@Obs <- out[[1]]@Obs
+#  res <- do.call(merge_MSE, out)
+#  saveRDS(res, file = paste0("GoM_cod/MSE_cod_NR", i, ".rds"))
+#}
+#

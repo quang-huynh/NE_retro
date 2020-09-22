@@ -6,11 +6,13 @@ library(dplyr)
 setup(12)
 sfLibrary(mfSCA)
 
-### Status quo - model average M02 and MRAMP
-### Test 1: no/rho adjust current EMs (cod M02 and MRAMP) 
+### Status quo - model average base and flatsel
+### Test 1: no/rho adjust current EMs
 ### Test 2: model averaging them
-### Test 3: incorrect EM 
-run_test <- 4
+### Test 3: ref MP with no indicators
+### Test 4: ref MP with indicators
+### Test 5: tuning MP
+run_test <- 5
 
 SRA_base <- readRDS("pollock/SRA_pollock_base.rds")
 SRA_flatsel <- readRDS("pollock/SRA_pollock_flatsel.rds")
@@ -89,18 +91,37 @@ for(i in 1:3) {
     saveRDS(MSE, file = paste0("pollock/MSE_pollock_t4_NR", i, ".rds"))
     rm(MSE)
   }
+  
+  if(5 %in% run_test) {
+    SRA_OM@OM@qcv <- SRA_OM@OM@qinc <- c(0, 0)
+    
+    FMSY <- readRDS("pollock/pollock_ref_pt.rds")[[i]][1, 1] %>% as.numeric()
+    
+    set.seed(315)
+    relF <- runif(SRA_OM@OM@nsim, 0.25, 3)
+    tuning_MP <- generate_Eff_MP_with_EM(relF, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears], 
+                                         args = args_base, assess = FALSE)
+    
+    sfExport(list = "tuning_MP")
+    MSE <- runMSE(SRA_OM@OM, MPs = "tuning_MP", parallel = TRUE)
+    message("Finished with NR ", i, " Test 5")
+    
+    saveRDS(MSE, file = paste0("pollock/MSE_pollock_tuningMP_NR", i, ".rds"))
+    rm(MSE)
+  }
+  
 }
 sfStop()
 
 ##### Merge MSE
-out <- list()
-for(i in 1:3) {
-  out[[1]] <- readRDS(paste0("pollock/MSE_pollock_NR", i, ".rds"))
-  out[[2]] <- readRDS(paste0("pollock/MSE_pollock_t4_NR", i, ".rds"))
-  out[[1]]@OM$qcv <- out[[1]]@OM$qinc <- 0
-  out[[2]]@Obs <- out[[1]]@Obs
-  res <- do.call(merge_MSE, out)
-  saveRDS(res, file = paste0("pollock/MSE_pollock_NR", i, ".rds"))
-}
-
+#out <- list()
+#for(i in 1:3) {
+#  out[[1]] <- readRDS(paste0("pollock/MSE_pollock_NR", i, ".rds"))
+#  out[[2]] <- readRDS(paste0("pollock/MSE_pollock_t4_NR", i, ".rds"))
+#  out[[1]]@OM$qcv <- out[[1]]@OM$qinc <- 0
+#  out[[2]]@Obs <- out[[1]]@Obs
+#  res <- do.call(merge_MSE, out)
+#  saveRDS(res, file = paste0("pollock/MSE_pollock_NR", i, ".rds"))
+#}
+#
 

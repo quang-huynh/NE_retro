@@ -112,39 +112,58 @@ generate_Eff_MP <- function(relF, FMSY, terminalF) {
 
 
 #' @export
-generate_Eff_MP_with_EM <- function(relF, FMSY, terminalF, args, args2 = NULL) {
+generate_Eff_MP_with_EM <- function(relF, FMSY, terminalF, args, args2 = NULL, assess = TRUE, retro = TRUE) {
   force(args)
   force(args2)
   force(relF)
   force(FMSY)
   force(terminalF)
+  force(retro)
+  force(assess)
   MP <- function(x, Data, reps) {
     Rec <- new("Rec")
-    Ftarget <- relF * FMSY
+    if(length(relF) > 1) {
+      FF <- relF[x]
+    } else FF <- relF
+    Ftarget <- FF * FMSY
     Rec@Effort <- rep(Ftarget/terminalF, reps)
     
     if(!is.null(args2)) {
-      models <- lapply(list(args, args2), function(xx) mf_SCA(x, Data, args = xx))
-      conv <- vapply(models, getElement, logical(1), "conv")
+      models <- lapply(list(args, args2), function(xx) mf_SCA(x, Data, args = xx, assess = assess))
+      if(assess) {
+        conv <- vapply(models, getElement, logical(1), "conv")
+        
+        Assess_diag <- MSEtool:::Assess_diagnostic(x, Data, models[[1]], include_assessment = FALSE)
+        Assess_diag2 <- MSEtool:::Assess_diagnostic(x, Data, models[[2]], include_assessment = FALSE)
+        
+        Rec@Misc <- c(Assess_diag, models[[1]]@info) # Note that identical(models[[1]]@info, model[[2]]@info) = TRUE
+        Rec@Misc$diagnostic2 <- Assess_diag2
+        
+        if(retro) {
+          ret <- lapply(models, retrospective_mf_SCA, nyr = 7)
+          rho <- vapply(ret, function(xx) summary(xx)[, 1]["Spawning biomass"], numeric(1))
+          Rec@Misc$rho <- cbind(Data@Misc[[x]]$rho, rho)
+        }
+      } else {
+        Rec@Misc <- models[[1]]@info
+      }
       
-      Assess_diag <- MSEtool:::Assess_diagnostic(x, Data, models[[1]], include_assessment = FALSE)
-      Assess_diag2 <- MSEtool:::Assess_diagnostic(x, Data, models[[2]], include_assessment = FALSE)
-      
-      Rec@Misc <- c(Assess_diag, models[[1]]@info) # Note that identical(models[[1]]@info, model[[2]]@info) = TRUE
-      Rec@Misc$diagnostic2 <- Assess_diag2
-      
-      ret <- lapply(models, retrospective_mf_SCA, nyr = 7)
-      rho <- vapply(ret, function(xx) summary(xx)[, 1]["Spawning biomass"], numeric(1))
-      Rec@Misc$rho <- cbind(Data@Misc[[x]]$rho, rho)
     } else {
-      do_Assessment <- mf_SCA(x, Data, args = args)
+      do_Assessment <- mf_SCA(x, Data, args = args, assess = assess)
       
-      ret <- retrospective_mf_SCA(do_Assessment, nyr = 7)
-      rho <- summary(ret)[, 1]["Spawning biomass"]
+      if(assess) {
+        Assess_diag <- MSEtool:::Assess_diagnostic(x, Data, do_Assessment, include_assessment = FALSE)
+        Rec@Misc <- c(Assess_diag, do_Assessment@info)
+        
+        if(retro) {
+          ret <- retrospective_mf_SCA(do_Assessment, nyr = 7)
+          rho <- summary(ret)[, 1]["Spawning biomass"]
+          Rec@Misc$rho <- c(Data@Misc[[x]]$rho, rho)
+        }
+      } else {
+        Rec@Misc <- do_Assessment@info
+      }
       
-      Assess_diag <- MSEtool:::Assess_diagnostic(x, Data, do_Assessment, include_assessment = FALSE)
-      Rec@Misc <- c(Assess_diag, do_Assessment@info)
-      Rec@Misc$rho <- c(Data@Misc[[x]]$rho, rho)
     }
     return(Rec)
   }

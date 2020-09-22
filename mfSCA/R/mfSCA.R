@@ -5,7 +5,7 @@
 #' @export
 #' @importFrom abind abind
 mf_SCA <- function(x = 1, Data, args = list(), R_proxy = expression(median(SRA_out$report$R)),
-                   ymax = expression(ncol(Data@Cat))) {  
+                   ymax = expression(ncol(Data@Cat)), assess = TRUE) {  
   data <- args$data # arguments from SRA scoping (historical data only)
   ymax <- eval(ymax)
   data$nyears <- ymax
@@ -99,73 +99,96 @@ mf_SCA <- function(x = 1, Data, args = list(), R_proxy = expression(median(SRA_o
         array(c(data$nyears, Data@MaxAge, 1))
     }
   }
-  SRA_out <- MSEtool:::SRA_scope_est(x = x, data = data, selectivity = args$selectivity, s_selectivity = args$s_selectivity, 
-                                     ESS = args$ESS, LWT = args$LWT, StockPars = args$StockPars, FleetPars = args$FleetPars,
-                                     ObsPars = list(Isd = rep(0.1, nrow(data$Chist))), dots = args$dots)
   
-  if(!SRA_out$SD$pdHess && (any(args$selectivity == -2) | any(args$s_selectivity == -2))) {
-    if(any(args$selectivity == -2)) {
-      args$dots$vul_par[, args$selectivity == -2] <- MSEtool:::ilogit(SRA_out$report$vul_par[, args$selectivity == -2])
-      
-      map2 <- args$dots$map_vul_par[, args$selectivity == -2]
-      map2[abs(SRA_out$report$vul_par[, args$selectivity == -2]) >= 7] <- NA
-      args$dots$map_vul_par[, args$selectivity == -2] <- map2
-    }
-    if(any(args$s_selectivity == -2)) {
-      args$dots$s_vul_par[, args$s_selectivity == -2] <- MSEtool:::ilogit(SRA_out$report$s_vul_par[, args$s_selectivity == -2])
-      
-      map2 <- args$dots$map_s_vul_par[, args$s_selectivity == -2]
-      map2[abs(SRA_out$report$s_vul_par[, args$s_selectivity == -2]) >= 7] <- NA
-      args$dots$map_s_vul_par[, args$s_selectivity == -2] <- map2
-    }
+  if(assess) {
+    
     SRA_out <- MSEtool:::SRA_scope_est(x = x, data = data, selectivity = args$selectivity, s_selectivity = args$s_selectivity, 
                                        ESS = args$ESS, LWT = args$LWT, StockPars = args$StockPars, FleetPars = args$FleetPars,
                                        ObsPars = list(Isd = rep(0.1, nrow(data$Chist))), dots = args$dots)
+    
+    if(!SRA_out$SD$pdHess && (any(args$selectivity == -2) | any(args$s_selectivity == -2))) {
+      if(any(args$selectivity == -2)) {
+        args$dots$vul_par[, args$selectivity == -2] <- MSEtool:::ilogit(SRA_out$report$vul_par[, args$selectivity == -2])
+        
+        map2 <- args$dots$map_vul_par[, args$selectivity == -2]
+        map2[abs(SRA_out$report$vul_par[, args$selectivity == -2]) >= 7] <- NA
+        args$dots$map_vul_par[, args$selectivity == -2] <- map2
+      }
+      if(any(args$s_selectivity == -2)) {
+        args$dots$s_vul_par[, args$s_selectivity == -2] <- MSEtool:::ilogit(SRA_out$report$s_vul_par[, args$s_selectivity == -2])
+        
+        map2 <- args$dots$map_s_vul_par[, args$s_selectivity == -2]
+        map2[abs(SRA_out$report$s_vul_par[, args$s_selectivity == -2]) >= 7] <- NA
+        args$dots$map_s_vul_par[, args$s_selectivity == -2] <- map2
+      }
+      SRA_out <- MSEtool:::SRA_scope_est(x = x, data = data, selectivity = args$selectivity, s_selectivity = args$s_selectivity, 
+                                         ESS = args$ESS, LWT = args$LWT, StockPars = args$StockPars, FleetPars = args$FleetPars,
+                                         ObsPars = list(Isd = rep(0.1, nrow(data$Chist))), dots = args$dots)
+    }
+    
+    R_proxy <- eval(R_proxy)
+    ref_pt <- mf_SCA_ref_pt(SRA_out, R_proxy = R_proxy) %>% # By default, use F40% and median recruitment
+      structure(names = c("FMSY", "EMSY", "VBMSY", "BMSY", "MSY"))
+    
+    F_report <- which.max(ref_pt$FMSY)[1] # This must be the apical F in the terminal year
+    F_out <- SRA_out$report$F_at_age[, F_report]
+    
+    Year <- Data@Year[1:ymax]
+    Yearplusone <- c(Year, max(Year) + 1)
+    YearEarly <- (Year[1] - Data@MaxAge + 1):(Year[1] - 1)
+    YearDev <- c(YearEarly, Year)
+    YearR <- c(YearDev, max(YearDev) + 1)
+    R <- c(rev(SRA_out$report$R_early), SRA_out$report$R)
+    
+    Dev <- structure(c(rev(SRA_out$report$log_early_rec_dev), SRA_out$report$log_rec_dev), names = YearDev)
+    
+    conv <- FALSE
+    if(!is.character(SRA_out$SD)) {
+      if(SRA_out$SD$pdHess || max(abs(SRA_out$SD$gradient.fixed <= 0.1))) conv <- TRUE
+    }
+    Assessment <- new("Assessment", Model = "mf_SCA", Name = Data@Name, conv = conv,
+                      h = SRA_out$report$h, FMort = structure(F_out, names = Year),
+                      B = structure(SRA_out$report$B, names = Yearplusone),
+                      SSB = structure(SRA_out$report$E, names = Yearplusone),
+                      R = structure(R, names = YearR),
+                      N = structure(rowSums(SRA_out$report$N), names = Yearplusone),
+                      N_at_age = SRA_out$report$N,
+                      Selectivity = SRA_out$report$F_at_age/apply(SRA_out$report$F_at_age, 1, max),
+                      Dev = Dev, Dev_type = "log-Recruitment deviations",
+                      NLL = ifelse(is.character(SRA_out$opt), NA_real_, SRA_out$opt$objective),
+                      obj = SRA_out$obj, opt = SRA_out$opt, SD = SRA_out$SD, TMB_report = c(SRA_out$report, ref_pt))
+    
+    Assessment@FMSY <- mean(ref_pt$FMSY[F_report])
+    Assessment@MSY <- ref_pt$MSY
+    Assessment@BMSY <- ref_pt$BMSY
+    Assessment@SSBMSY <- ref_pt$EMSY
+    Assessment@VBMSY <- ref_pt$VBMSY
+    Assessment@F_FMSY <- structure(Assessment@FMort/Assessment@FMSY, names = Year)
+    Assessment@B_BMSY <- structure(Assessment@B/Assessment@BMSY, names = Yearplusone)
+    Assessment@SSB_SSBMSY <- structure(Assessment@SSB/Assessment@SSBMSY, names = Yearplusone)
+    Assessment@VB <- rowSums(rbind(Assessment@Selectivity, Assessment@Selectivity[data$nyears, ]) * 
+                               Assessment@N_at_age * SRA_out$obj$env$data$wt)
+    Assessment@VB_VBMSY <- structure(Assessment@VB/Assessment@VBMSY, names = Yearplusone)
+    
+    if(Assessment@conv) {
+      SE_Early <- ifelse(SRA_out$obj$env$data$est_early_rec_dev, 
+                         sqrt(diag(SRA_out$SD$cov.fixed)[names(SRA_out$SD$par.fixed) == "log_early_rec_dev"]), NA)
+      SE_Main <- ifelse(SRA_out$obj$env$data$est_rec_dev, 
+                        sqrt(diag(SRA_out$SD$cov.fixed)[names(SRA_out$SD$par.fixed) == "log_rec_dev"]), NA)
+      SE_Dev <- structure(c(rev(SE_Early), SE_Main), names = YearDev)
+      
+      first_non_zero <- which(!is.na(SE_Dev))[1]
+      if(!is.na(first_non_zero) && first_non_zero > 1) {
+        Dev <- Dev[-c(1:(first_non_zero - 1))]
+        SE_Dev <- SE_Dev[-c(1:(first_non_zero - 1))]
+        SE_Dev[is.na(SE_Dev)] <- 0
+      }
+      Assessment@Dev <- Dev
+      Assessment@SE_Dev <- SE_Dev
+    }
+  } else {
+    Assessment <- new("Assessment")
   }
-  
-  R_proxy <- eval(R_proxy)
-  ref_pt <- mf_SCA_ref_pt(SRA_out, R_proxy = R_proxy) %>% # By default, use F40% and median recruitment
-    structure(names = c("FMSY", "EMSY", "VBMSY", "BMSY", "MSY"))
-  
-  F_report <- which.max(ref_pt$FMSY)[1] # This must be the apical F in the terminal year
-  F_out <- SRA_out$report$F_at_age[, F_report]
-  
-  Year <- Data@Year[1:ymax]
-  Yearplusone <- c(Year, max(Year) + 1)
-  YearEarly <- (Year[1] - Data@MaxAge + 1):(Year[1] - 1)
-  YearDev <- c(YearEarly, Year)
-  YearR <- c(YearDev, max(YearDev) + 1)
-  R <- c(rev(SRA_out$report$R_early), SRA_out$report$R)
-  
-  Dev <- structure(c(rev(SRA_out$report$log_early_rec_dev), SRA_out$report$log_rec_dev), names = YearDev)
-  
-  conv <- FALSE
-  if(!is.character(SRA_out$SD)) {
-    if(SRA_out$SD$pdHess || max(abs(SRA_out$SD$gradient.fixed <= 0.1))) conv <- TRUE
-  }
-  Assessment <- new("Assessment", Model = "mf_SCA", Name = Data@Name, conv = conv,
-                    h = SRA_out$report$h, FMort = structure(F_out, names = Year),
-                    B = structure(SRA_out$report$B, names = Yearplusone),
-                    SSB = structure(SRA_out$report$E, names = Yearplusone),
-                    R = structure(R, names = YearR),
-                    N = structure(rowSums(SRA_out$report$N), names = Yearplusone),
-                    N_at_age = SRA_out$report$N,
-                    Selectivity = SRA_out$report$F_at_age/apply(SRA_out$report$F_at_age, 1, max),
-                    Dev = Dev, Dev_type = "log-Recruitment deviations",
-                    NLL = ifelse(is.character(SRA_out$opt), NA_real_, SRA_out$opt$objective),
-                    obj = SRA_out$obj, opt = SRA_out$opt, SD = SRA_out$SD, TMB_report = c(SRA_out$report, ref_pt))
-  
-  Assessment@FMSY <- mean(ref_pt$FMSY[F_report])
-  Assessment@MSY <- ref_pt$MSY
-  Assessment@BMSY <- ref_pt$BMSY
-  Assessment@SSBMSY <- ref_pt$EMSY
-  Assessment@VBMSY <- ref_pt$VBMSY
-  Assessment@F_FMSY <- structure(Assessment@FMort/Assessment@FMSY, names = Year)
-  Assessment@B_BMSY <- structure(Assessment@B/Assessment@BMSY, names = Yearplusone)
-  Assessment@SSB_SSBMSY <- structure(Assessment@SSB/Assessment@SSBMSY, names = Yearplusone)
-  Assessment@VB <- rowSums(rbind(Assessment@Selectivity, Assessment@Selectivity[data$nyears, ]) * 
-                             Assessment@N_at_age * SRA_out$obj$env$data$wt)
-  Assessment@VB_VBMSY <- structure(Assessment@VB/Assessment@VBMSY, names = Yearplusone)
   
   Assessment@info <- list()
   if(exists("Nind", inherits = FALSE)) Assessment@info$Nind <- Nind
@@ -175,22 +198,6 @@ mf_SCA <- function(x = 1, Data, args = list(), R_proxy = expression(median(SRA_o
     if(exists("Chist", inherits = FALSE)) Assessment@info$Chist <- Chist
   }
   
-  if(Assessment@conv) {
-    SE_Early <- ifelse(SRA_out$obj$env$data$est_early_rec_dev, 
-                       sqrt(diag(SRA_out$SD$cov.fixed)[names(SRA_out$SD$par.fixed) == "log_early_rec_dev"]), NA)
-    SE_Main <- ifelse(SRA_out$obj$env$data$est_rec_dev, 
-                      sqrt(diag(SRA_out$SD$cov.fixed)[names(SRA_out$SD$par.fixed) == "log_rec_dev"]), NA)
-    SE_Dev <- structure(c(rev(SE_Early), SE_Main), names = YearDev)
-    
-    first_non_zero <- which(!is.na(SE_Dev))[1]
-    if(!is.na(first_non_zero) && first_non_zero > 1) {
-      Dev <- Dev[-c(1:(first_non_zero - 1))]
-      SE_Dev <- SE_Dev[-c(1:(first_non_zero - 1))]
-      SE_Dev[is.na(SE_Dev)] <- 0
-    }
-    Assessment@Dev <- Dev
-    Assessment@SE_Dev <- SE_Dev
-  }
   return(Assessment)
 }
 class(mf_SCA) <- "Assess"
