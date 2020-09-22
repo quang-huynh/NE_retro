@@ -160,15 +160,6 @@ indicators_raw <- lapply(1:length(MSE), get_indicators, ind_interval = 6, MSE = 
                          mah_ind = c("SSB_rho", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp"))
 indicators <- do.call(rbind, lapply(indicators_raw, getElement, 1))
 
-######## Indicators - refMPs
-Year_vec <- vapply(MSE[[1]]@Misc$Data[[1]]@Misc[[1]]$diagnostic, getElement, numeric(1), "Year")
-indicators_raw_ref <- lapply(1:length(MSE_ref), get_indicators, ind_interval = 6, MSE = MSE_ref, 
-                         MPs = MSE_ref[[1]]@MPs, s_CAA_hist = s_CAA_hist,
-                         mah_ind = c("SSB_rho", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp"), Year_vec = Year_vec)
-indicators_ref <- do.call(rbind, lapply(indicators_raw_ref, getElement, 1))
-indicators_ts_ref <- summarise(group_by(indicators_ref, Ind, Year, MP, OM),
-                           y = median(value, na.rm = TRUE),
-                           ymin = quantile(value, 0.25, na.rm = TRUE), ymax = quantile(value, 0.75, na.rm = TRUE)) %>% filter(Year > 2020)
 
 # Mahalanobis
 #mah <- do.call(rbind, lapply(indicators_raw, getElement, 2))
@@ -235,7 +226,9 @@ indicators_plot <- indicators_ts %>%
   mutate(Ind = factor(Ind, levels = c("SSB_rho", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp"))) #%>% filter(Year >= 2024)
 ggplot(indicators_plot, aes(x = Year, shape = OM, colour = OM)) + 
   facet_grid(Ind ~ MP, scales = "free_y") + 
-  geom_hline(data = data.frame(Ind = factor("SSB_rho", levels = c("SSB_rho", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp")), yy = 0), aes(yintercept = yy), linetype = 2) + 
+  geom_hline(data = data.frame(Ind = factor(c("SSB_rho", "Cat_slp", "Ind_1_slp", "MAge_1_slp"),
+                                            levels = c("SSB_rho", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp")), yy = 0), 
+             aes(yintercept = yy), linetype = 2) + 
   geom_ribbon(aes(ymin = ymin, ymax = ymax, fill = OM), alpha = 0.1) + 
   geom_point(aes(y = y)) + geom_line(aes(y = y)) + 
   xlab("Year") + ylab("Indicator Value") + scale_x_continuous(breaks = c(2020, 2040, 2060)) +
@@ -263,47 +256,24 @@ ggsave("report/pollock/indicator_delta.png", height = 7, width = 7)
 # Scatter plots 
 indicators_scatter <- reshape2::dcast(indicators, formula = Year + Sim + MP + OM ~ Ind, value.var = "value")
 
-x <- MSE[[1]]
-MPs <- x@MPs[1:2]
-x@F_FMSY[, 1:2, ] %>% structure(dimnames = list(1:x@nsim, MPs, 1:x@proyears)) %>% 
-  reshape2::melt(varnames = c("sim", "MP", "time"), value.name = expression(F/F[MSY])) %>% 
-  mutate(OM = paste0("NR", i))
-
 F_FMSY <- lapply(1:length(MSE), function(x, MPs) MSE[[x]]@F_FMSY[, match(MPs, MSE[[x]]@MPs), , drop = FALSE] %>% 
                    structure(dimnames = list(1:MSE[[x]]@nsim, MPs, MSE[[x]]@nyears + 1:MSE[[x]]@proyears)) %>% 
                    reshape2::melt(varnames = c("Sim", "MP", "time"), value.name = "F.FMSY") %>% 
                    mutate(Year = time + MSE[[x]]@OM$CurrentYr[1] - MSE[[x]]@nyears, time = NULL) %>%
-                   mutate(OM = paste0("NR", x)), MPs = "base")
+                   mutate(OM = paste0("NR", x)), MPs = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSYref"))
 F_FMSY <- do.call(rbind, F_FMSY)
 
-ggplot(filter(indicators_scatter, MP == "base") %>% left_join(F_FMSY) %>% filter(!is.na(F.FMSY)), 
-       aes(x = SSB_rho, y = F.FMSY, colour = OM , shape = OM)) + facet_wrap(~ Year) + geom_point(alpha = 0.9) + 
+indicators_regress <- left_join(indicators_scatter, F_FMSY) %>% filter(!is.na(F.FMSY))
+ggplot(indicators_regress %>% filter(MP == "base"), aes(x = SSB_rho, y = F.FMSY)) + 
+  facet_wrap(~ Year) + geom_point(aes(colour = OM, shape = OM), alpha = 0.9) + 
+  geom_smooth(method = lm, se = FALSE, colour = "black", formula = y ~ x) +
   geom_hline(yintercept = 1, linetype = 2) + geom_vline(xintercept = 0, linetype = 2) + labs(x = expression(rho[SSB]), y = expression(F/F[MSY])) +
+  coord_cartesian(xlim = c(-0.4, 1)) + 
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/pollock/indicator_scatter.png", height = 6, width = 6)
 
-#ggplot(filter(indicators_scatter, MP == "base") %>% left_join(F_FMSY) %>% filter(!is.na(F.FMSY)), 
-#       aes(x = SSB_rho, y = F.FMSY, colour = OM)) + facet_wrap(~ Year) + geom_point() + 
-#  geom_hline(yintercept = 0, linetype = 2) + geom_vline(xintercept = 0, linetype = 2) +
-#  gfplot::theme_pbs() + no_panel_gap + legend_bottom
-
-
-unique(indicators_scatter$Year)
-ggplot(filter(indicators_scatter, Year == 2027), aes(x = SSB_rho, y = Cat_slp, shape = OM, colour = OM)) + geom_point() + 
-  facet_wrap(~ factor(MP, levels = c("base", "base_ra", "flatsel", "flastel_ra", "ma")), scales = "free") + ggtitle("Year 2027") +
-  gfplot::theme_pbs() + legend_bottom
-ggsave("report/pollock/indicator_scatter.png", height = 4.5, width = 7)
-
-#filter(indicators_scatter, Year == 2024) %>% ggplot(aes(x = Cat_mu, y = Cat_slp, shape = OM, colour = OM)) + geom_point() + 
-#  facet_wrap(~MP) + gfplot::theme_pbs()
-
-#filter(indicators_scatter, Year == 2024) %>% ggplot(aes(x = Cat_mu, y = Ind_1_mu, shape = OM, colour = OM)) + geom_point() + 
-#  facet_wrap(~MP) + gfplot::theme_pbs()
-
-
-##### Indicators of ref MPs
-ggplot(indicators_ts_ref, aes(x = Year, shape = OM, colour = OM)) + facet_grid(Ind ~ MP, scales = "free_y") + 
-  geom_ribbon(aes(ymin = ymin, ymax = ymax, fill = OM), alpha = 0.1) + 
-  geom_point(aes(y = y)) + geom_line(aes(y = y)) + 
-  xlab("Year") + ylab("Indicator Value") + 
+out <- indicators_regress %>% group_by(Year, MP) %>% summarise(slp = lm(F.FMSY ~ SSB_rho) %>% coef() %>% getElement(2))
+ggplot(out, aes(Year, slp, shape = MP)) + geom_line() + geom_point() +
+  geom_hline(yintercept = 0, linetype = 2) + labs(y = "Regression slope") + 
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
+ggsave("report/pollock/indicator_slope.png", height = 3, width = 4)
