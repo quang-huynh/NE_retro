@@ -3,13 +3,8 @@ library(dplyr)
 library(mfSCA)
 library(ggplot2)
 
-# Calc ref points
-SRA <- lapply(1:3, function(i) readRDS(paste0("pollock/SRA_NR", i, ".rds")))
-med_rec <- vapply(SRA, function(i) quantile(i@mean_fit$report$R, 0.5), numeric(1))
-
 ######## Reference points
-ref_pt <- lapply(1:3, function(i) calc_refpt(SRA[[i]], med_rec = med_rec[i]))
-#saveRDS(ref_pt, file = "pollock/pollock_ref_pt.rds")
+ref_pt <- readRDS(file = "pollock/pollock_ref_pt.rds")
 
 ref_pt_plot <- do.call(rbind, lapply(ref_pt, function(i) i[1, ])) %>% as.data.frame()
 ref_pt_plot$OM <- paste0("NR", 1:3)

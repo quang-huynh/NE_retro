@@ -3,15 +3,8 @@ library(dplyr)
 library(mfSCA)
 library(ggplot2)
 
-# Calc OM ref points with M = 0.02
-SRA <- lapply(1:3, function(i) readRDS(paste0("GoM_cod/SRA_NR", i, ".rds")))
-med_rec <- vapply(SRA, function(i) quantile(i@mean_fit$report$R, 0.75), numeric(1))
-
 ######## Reference points
-ref_pt <- list()
-ref_pt[[1]] <- lapply(1:3, function(i) calc_refpt(SRA[[i]], med_rec = med_rec[i]))
-ref_pt[[2]] <- lapply(1:3, function(i) calc_refpt(SRA[[i]], M = "true", med_rec = med_rec[i]))
-saveRDS(ref_pt, file = "GoM_cod/cod_ref_pt.rds")
+ref_pt <- readRDS("GoM_cod/cod_ref_pt.rds")
 
 ref_pt_plot <- do.call(rbind, lapply(ref_pt, function(i) do.call(rbind, lapply(i, function(ii) ii[1, ])))) %>% 
   as.data.frame()

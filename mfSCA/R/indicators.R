@@ -94,8 +94,6 @@ getinds <- function(Data, Year_vec, res, tsd, stat, Cbias) {
 }
 
 
-
-
 #mah_contribution <- function(indPPD){
 #  ntsd<-dim(indPPD)[1]
 #  np<-dim(indPPD)[2]

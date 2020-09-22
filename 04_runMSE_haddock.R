@@ -6,8 +6,10 @@ library(dplyr)
 setup(12)
 sfLibrary(mfSCA)
 
-### Status quo - model average M02 and MRAMP
-### Test 1: no/rho adjust current EMs (cod M02 and MRAMP) 
+### Status quo
+### Test 1: no/rho adjust current EM
+### Tets 5: tuning MP
+run_test <- 4
 
 SRA_base <- readRDS("GoM_haddock/SRA_haddock_sel9.rds")
 
@@ -27,13 +29,49 @@ for(i in 1:3) {
   
   message("Running NR ", i)
   
-  MSE <- runMSE(SRA_OM@OM, MPs = c("base", "base_ra", "NFref", "FMSYref"), parallel = TRUE,
-                save_name = paste0("GoM_haddock/prelim_NR", i))
+  if(1 %in% run_test) {
+    MSE <- runMSE(SRA_OM@OM, MPs = c("base", "base_ra", "NFref", "FMSYref"), parallel = TRUE,
+                  save_name = paste0("GoM_haddock/prelim_NR", i))
+    
+    message("Finished with NR ", i)
+    
+    saveRDS(MSE, file = paste0("GoM_haddock/MSE_haddock_NR", i, ".rds"))
+    rm(MSE)
+  }
   
-  message("Finished with NR ", i)
   
-  saveRDS(MSE, file = paste0("GoM_haddock/MSE_haddock_NR", i, ".rds"))
-  rm(MSE) 
+  if(4 %in% run_test) {
+    SRA_OM@OM@qcv <- SRA_OM@OM@qinc <- c(0, 0)
+    
+    FMSY <- readRDS("GoM_haddock/haddock_ref_pt.rds")[[2]][[i]][1, 1] %>% as.numeric()
+    `75%FMSY` <- generate_Eff_MP_with_EM(0.75, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears], 
+                                         args = args_base, assess = FALSE)
+    
+    sfExport(list = "75%FMSY")
+    MSE <- runMSE(SRA_OM@OM, MPs = c("75%FMSY", "FMSYref75"), parallel = FALSE)
+    message("Finished with NR ", i, " Test 4")
+    
+    saveRDS(MSE, file = paste0("GoM_haddock/MSE_haddock_t4_NR", i, ".rds"))
+    rm(MSE)
+  }
+  
+  if(5 %in% run_test) {
+    SRA_OM@OM@qcv <- SRA_OM@OM@qinc <- c(0, 0)
+    
+    FMSY <- readRDS("GoM_haddock/haddock_ref_pt.rds")[[2]][[i]][1, 1] %>% as.numeric()
+    
+    set.seed(98273)
+    relF <- runif(SRA_OM@OM@nsim, 0.25, 1.75)
+    tuning_MP <- generate_Eff_MP_with_EM(relF, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears], 
+                                         args = args_base, assess = FALSE)
+    
+    sfExport(list = "tuning_MP")
+    MSE <- runMSE(SRA_OM@OM, MPs = "tuning_MP", parallel = FALSE)
+    message("Finished with NR ", i, " Test 5")
+    
+    saveRDS(MSE, file = paste0("GoM_haddock/MSE_haddock_tuningMP_NR", i, ".rds"))
+    rm(MSE)
+  }
   
 }
 sfStop()

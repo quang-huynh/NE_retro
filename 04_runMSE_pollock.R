@@ -98,12 +98,12 @@ for(i in 1:3) {
     FMSY <- readRDS("pollock/pollock_ref_pt.rds")[[i]][1, 1] %>% as.numeric()
     
     set.seed(315)
-    relF <- runif(SRA_OM@OM@nsim, 0.25, 3)
+    relF <- runif(SRA_OM@OM@nsim, 0.25, 1.75)
     tuning_MP <- generate_Eff_MP_with_EM(relF, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears], 
                                          args = args_base, assess = FALSE)
     
     sfExport(list = "tuning_MP")
-    MSE <- runMSE(SRA_OM@OM, MPs = "tuning_MP", parallel = TRUE)
+    MSE <- runMSE(SRA_OM@OM, MPs = "tuning_MP", parallel = FALSE)
     message("Finished with NR ", i, " Test 5")
     
     saveRDS(MSE, file = paste0("pollock/MSE_pollock_tuningMP_NR", i, ".rds"))

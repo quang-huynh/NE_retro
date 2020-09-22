@@ -84,7 +84,7 @@ for(i in 1:3) {
     
     FMSY <- readRDS("GoM_cod/cod_ref_pt.rds")[[2]][[i]][1, 1] %>% as.numeric()
     `75%FMSY` <- generate_Eff_MP_with_EM(0.75, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears], 
-                                         args = args_M02, assess = FALSE)
+                                         args = args_M02, args2 = args_MRAMP)
     
     sfExport(list = "75%FMSY")
     MSE <- runMSE(SRA_OM@OM, MPs = c("75%FMSY", "FMSYref75"), parallel = TRUE)
@@ -100,12 +100,12 @@ for(i in 1:3) {
     FMSY <- readRDS("GoM_cod/cod_ref_pt.rds")[[2]][[i]][1, 1] %>% as.numeric()
     
     set.seed(421)
-    relF <- runif(SRA_OM@OM@nsim, 0.25, 3)
+    relF <- runif(SRA_OM@OM@nsim, 0.25, 1.75)
     tuning_MP <- generate_Eff_MP_with_EM(relF, FMSY = FMSY, terminalF = SRA_OM@OM@cpars$Find[1, SRA_OM@OM@nyears], 
                                          args = args_M02, assess = FALSE)
     
     sfExport(list = "tuning_MP")
-    MSE <- runMSE(SRA_OM@OM, MPs = "tuning_MP", parallel = TRUE)
+    MSE <- runMSE(SRA_OM@OM, MPs = "tuning_MP", parallel = FALSE)
     message("Finished with NR ", i, " Test 5")
     
     saveRDS(MSE, file = paste0("GoM_cod/MSE_cod_tuningMP_NR", i, ".rds"))
