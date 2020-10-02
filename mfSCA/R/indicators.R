@@ -3,21 +3,24 @@
 
 #' @export
 get_indicators <- function(i, MSE_list, MPs = NULL, time_stanza = NULL, ind_type = NULL, ind_interval = 5, Cbias = rep(1, 3),
-                           s_CAA_hist = NULL, mah_ind = c("SSB_rho", "Cat_slp"), Year_vec = NULL) {
+                           s_CAA_hist = NULL, mah_ind = NULL, Year_vec = NULL, OM_names = NULL, mat_age = NULL) {
   MSE <- MSE_list[[i]]
   Cbias_i <- Cbias[i]
   if(is.null(MPs)) MPs <- MSE@MPs
   out <- lapply(match(MPs, MSE@MPs), get_indicators_fn, MSE = MSE, ind_interval = ind_interval, time_stanza = time_stanza, ind_type = ind_type,
-                Cbias = Cbias_i, s_CAA_hist = s_CAA_hist, mah_ind = mah_ind, Year_vec = Year_vec)
+                Cbias = Cbias_i, s_CAA_hist = s_CAA_hist, mah_ind = mah_ind, Year_vec = Year_vec, mat_age = mat_age)
   
-  ind <- do.call(rbind, lapply(out, function(x) x[[1]] %>% dplyr::mutate(OM = paste0("NR", i), Year = Time + MSE@OM$CurrentYr[1] - MSE@nyears, Time = NULL)))
-  mah <- do.call(rbind, lapply(out, function(x) x[[2]] %>% dplyr::mutate(OM = paste0("NR", i), Year = Time + MSE@OM$CurrentYr[1] - MSE@nyears, Time = NULL)))
-  #mcont <- do.call(rbind, lapply(out, function(x) x[[3]] %>% dplyr::mutate(OM = paste0("NR", i), Year = Time + MSE@OM$CurrentYr[1] - MSE@nyears, Time = NULL)))
-  #return(list(ind = ind, mah = mah, mcont = mcont))
+  ind <- lapply(out, function(x) x[[1]] %>% dplyr::mutate(OM = OM_names[i], Year = Time + MSE@OM$CurrentYr[1] - MSE@nyears, Time = NULL)) %>%
+    do.call(rbind, .) %>% mutate(OM = factor(OM, levels = OM_names))
+  if(!is.null(mah_ind)) {
+    mah <- do.call(rbind, lapply(out, function(x) x[[2]] %>% dplyr::mutate(OM = OM_names[i], Year = Time + MSE@OM$CurrentYr[1] - MSE@nyears, Time = NULL)))
+  } else {
+    mah <- NULL
+  }
   return(list(ind = ind, mah = mah))
 }
 
-get_indicators_fn <- function(ii, MSE, ind_interval = 5, time_stanza = NULL, ind_type = NULL, Cbias = 1, s_CAA_hist, mah_ind, Year_vec = NULL) {
+get_indicators_fn <- function(ii, MSE, ind_interval = 5, time_stanza = NULL, ind_type = NULL, Cbias = 1, s_CAA_hist, mah_ind, Year_vec = NULL, mat_age = mat_age) {
   Data <- MSE@Misc$Data[[ii]]
   if(is.null(Year_vec)) {
     Year_vec <- vapply(Data@Misc[[1]]$diagnostic, getElement, numeric(1), "Year")
@@ -45,7 +48,7 @@ get_indicators_fn <- function(ii, MSE, ind_interval = 5, time_stanza = NULL, ind
   if(is.null(s_CAA[[1]])) {
     MAout <- NULL 
   } else {
-    MAout <- array(NA, c(dim(s_CAA[[1]])[3]*2, length(Year_vec), length(s_CAA)))
+    MAout <- PMout <- array(NA, c(dim(s_CAA[[1]])[3]*2, length(Year_vec), length(s_CAA)))
     
     for(i in 1:dim(s_CAA[[1]])[3]) { # loop over index
       mean_age <- apply(s_CAA_hist[, , i], 1, function(xx) weighted.mean(1:length(xx), xx, na.rm = TRUE)) %>% 
@@ -53,26 +56,40 @@ get_indicators_fn <- function(ii, MSE, ind_interval = 5, time_stanza = NULL, ind
       mean_age2 <- sapply(s_CAA, function(x) apply(x[, , i], 1, function(xx) weighted.mean(1:length(xx), xx, na.rm = TRUE))) %>% t()
       mean_age <- abind::abind(mean_age, mean_age2, along = 2)
       
+      Pmat <- apply(s_CAA_hist[, , i], 1, function(xx) weighted.mean(mat_age, xx, na.rm = TRUE)) %>% 
+        matrix(length(s_CAA), MSE@nyears, byrow = TRUE)
+      Pmat2 <- sapply(s_CAA, function(x) apply(x[, , i], 1, function(xx) weighted.mean(mat_age, xx, na.rm = TRUE))) %>% t()
+      Pmat <- abind::abind(Pmat, Pmat2, along = 2)
+      
       for(j in 1:length(Year_vec)) {
         MAout[2*(i-1)+1, j, ] <- vapply(1:nrow(mean_age), MSEtool:::slp, numeric(1), mat = mean_age, ind = seq(Year_vec[j] - ind_interval + 1, Year_vec[j]))
         MAout[2*(i-1)+2, j, ] <- vapply(1:nrow(mean_age), MSEtool:::mu, numeric(1), mat = mean_age, ind = seq(Year_vec[j] - ind_interval + 1, Year_vec[j]))
+        PMout[2*(i-1)+1, j, ] <- vapply(1:nrow(Pmat), MSEtool:::slp, numeric(1), mat = Pmat, ind = seq(Year_vec[j] - ind_interval + 1, Year_vec[j]))
+        PMout[2*(i-1)+2, j, ] <- vapply(1:nrow(Pmat), MSEtool:::mu, numeric(1), mat = Pmat, ind = seq(Year_vec[j] - ind_interval + 1, Year_vec[j]))
       }
     }
     dimnames(MAout) <- list(paste0("MAge_", rep(1:dim(s_CAA[[1]])[3], each = 2), "_", rep(c("slp", "mu"), nindex)), Year_vec, 1:length(s_CAA))
+    dimnames(PMout) <- list(paste0("PMat_", rep(1:dim(s_CAA[[1]])[3], each = 2), "_", rep(c("slp", "mu"), nindex)), Year_vec, 1:length(s_CAA))
+    
   }
   
-  args <- c(list(rho, Cout, MAout), Iout, list(along = 1))
+  args <- c(list(rho, Cout, MAout, PMout), Iout, list(along = 1))
   out <- do.call(abind::abind, args)
   
   if(is.null(time_stanza)) time_stanza <- seq_len(dim(out)[2])
   if(is.null(ind_type)) ind_type <- seq_len(dim(out)[1])
   out <- out[ind_type, time_stanza, , drop = FALSE]
   ind_df <- out %>% reshape2::melt(varnames = c("Ind", "Time", "Sim")) %>% dplyr::mutate(MP = MSE@MPs[ii])
-
-  out <- out[match(mah_ind, dimnames(out)[[1]]), -1, ]
-  out[is.na(out)] <- 0.01
-  mah <- MSEtool::Probs(out, out)[[1]][1, , ] %>% structure(dimnames = dimnames(out)[-1]) %>% 
-    reshape2::melt(varnames = c("Time", "Sim")) %>% dplyr::mutate(MP = MSE@MPs[ii])
+  
+  if(!is.null(mah_ind)) {
+    out <- out[match(mah_ind, dimnames(out)[[1]]), -1, ]
+    out[is.na(out)] <- 0.01
+    
+    mah <- MSEtool::Probs(out, out)[[1]][1, , ] %>% structure(dimnames = dimnames(out)[-1]) %>% 
+      reshape2::melt(varnames = c("Time", "Sim")) %>% dplyr::mutate(MP = MSE@MPs[ii])
+  } else {
+    mah <- NULL
+  }
   #mcont <- mah_contribution(out) %>% structure(dimnames = dimnames(out)[-1]) %>% 
   #  reshape2::melt(varnames = c("Ind", "Time", "Sim")) %>% dplyr::mutate(MP = MSE@MPs[ii])
   #return(list(ind_df = ind_df, mah = mah, mcont = mcont))
