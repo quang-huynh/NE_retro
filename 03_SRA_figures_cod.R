@@ -18,19 +18,19 @@ compare_SRA(res1, res2, res3, res4, res5,
 
 ################# Compare SSB and R
 
-SSB <- cbind %>% do.call(lapply(list(res1, res2, res3, res4, res5), function(x) x@SSB[1, ]))
-RR <- cbind %>% do.call(lapply(list(res1, res2, res3, res4, res5), function(x) x@Misc[[1]]$R))
+SSB <- cbind %>% do.call(lapply(list(res3, res5, res4, res1, res2), function(x) x@SSB[1, ]))
+RR <- cbind %>% do.call(lapply(list(res3, res5, res4, res1, res2), function(x) x@Misc[[1]]$R))
 
-png("report/GoM_cod/SSB_R.png", height = 6, width = 5, units = "in", res = 400)
+png("report/GoM_cod/SSB_R.png", height = 5, width = 4, units = "in", res = 400)
 par(mar = c(2, 4, 1, 1), oma = c(2, 0, 0, 0), mfrow = c(2, 1))
 
-matplot(1982:2019, RR, ylab = "Recruitment", xlab = "Year", xlim = c(1980, 2020), type = "l", lty = c(3, 3, 1, 1, 1), 
-        col = c(1, 3, 4, 5, 2), lwd = 2, ylim = c(0, 50000))
+matplot(1982:2019, RR, ylab = "Recruitment", xlab = "Year", xlim = c(1980, 2020), type = "l", lty = c(1, 1, 1, 2, 2), 
+        col = c(4, 2, 5, 1, 3), lwd = 2, ylim = c(0, 50000))
 abline(h = 0, col = "grey")
-legend("topright", c("M02", "MRAMP", "NR1", "NR2", "NR3"), col = c(1, 3, 4, 5, 2), lwd = 2, lty = c(3, 3, 1, 1, 1))
+legend("topright", c("MC", "IM", "MCIM", "M02", "MRAMP"), col = c(4, 2, 5, 1, 3), lwd = 2, lty = c(1, 1, 1, 2, 2), ncol = 2, bty = "n")
 
-matplot(1982:2019, SSB, xlab = "Year", xlim = c(1980, 2020), type = "l", lty = c(3, 3, 1, 1, 1), 
-        col = c(1, 3, 4, 5, 2), lwd = 2, ylim = c(0, 60000))
+matplot(1982:2019, SSB, xlab = "Year", xlim = c(1980, 2020), type = "l", lty = c(1, 1, 1, 2, 2), 
+        col = c(4, 2, 5, 1, 3), lwd = 2, ylim = c(0, 60000))
 abline(h = 0, col = "grey")
 
 mtext("Year", side = 1, outer = TRUE, line = 1)
@@ -82,10 +82,10 @@ dev.off()
 
 # Model peels
 setup(3)
-rr_OM <- sfLapply(list(res3, res4, res5), retrospective, nyr = 7, figure = FALSE)
+rr_OM <- sfLapply(list(res3, res5, res4), retrospective, nyr = 7, figure = FALSE)
 rr_EM <- sfLapply(list(res1, res2), retrospective, nyr = 7, figure = FALSE)
 
-model_name <- paste0("NR", 1:3) %>% c("M02", "MRAMP")
+model_name <- c("MC", "IM", "MCIM", "M02", "MRAMP")
 rr_out <- lapply(1:5, function(i, x) x[[i]]@TS[, , 2] %>% reshape2::melt(value.name = "SSB") %>% mutate(Model = model_name[i]), 
                  x = c(rr_OM, rr_EM))
 rr_out <- do.call(rbind, rr_out) %>% mutate(Model = factor(Model, levels = model_name))

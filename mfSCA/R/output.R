@@ -1,6 +1,6 @@
 
 #' @export
-calc_refpt <- function(sra, M = c("firstyear", "true"), med_rec = 1) {
+calc_refpt <- function(sra, M = c("firstyear", "true"), med_rec = 1, Perr_mult = 1) {
   M <- match.arg(M)
   if(M == "firstyear") {
     M_ageArray <- array(sra@OM@cpars$M_ageArray[1,1,1], dim(sra@OM@cpars$Wt_age))
@@ -13,7 +13,7 @@ calc_refpt <- function(sra, M = c("firstyear", "true"), med_rec = 1) {
                     V = sra@OM@cpars$V, maxage = sra@OM@maxage, 
                     R0 = sra@OM@cpars$R0, SRrel = rep(sra@OM@SRrel, sra@OM@nsim), 
                     SSBPR0 = vapply(sra@Misc, getElement, numeric(1), "EPR0_SR"),
-                    hs = sra@OM@cpars$h, yr.ind = sra@OM@nyears, plusgroup = 1)
+                    hs = sra@OM@cpars$h, yr.ind = sra@OM@nyears, plusgroup = 1, Perr_mult = Perr_mult)
   ref_pt <- lapply(c("F", "SB", "Yield"), function(x) vapply(ref_out, getElement, numeric(1), x))
   
   OY <- MSYCalcs(log(0.75 * ref_pt[[1]][1]), M_at_Age = M_ageArray[1, , sra@OM@nyears], 
@@ -22,7 +22,7 @@ calc_refpt <- function(sra, M = c("firstyear", "true"), med_rec = 1) {
                  V_at_Age = sra@OM@cpars$V[1, , sra@OM@nyears],
                  maxage = sra@OM@maxage, 
                  R0x = sra@OM@cpars$R0[1], SRrelx = sra@OM@SRrel, Egg0 = sra@Misc[[1]]$EPR0_SR,
-                 hx = sra@OM@cpars$h[1], opt = 2, plusgroup = 1)
+                 hx = sra@OM@cpars$h[1], opt = 2, plusgroup = 1, Perr_mult = Perr_mult)
   
   eq_fn <- function(logF) {
     Fout <- MSYCalcs(logF, M_at_Age = M_ageArray[1, , sra@OM@nyears], 
@@ -31,7 +31,7 @@ calc_refpt <- function(sra, M = c("firstyear", "true"), med_rec = 1) {
                      V_at_Age = sra@OM@cpars$V[1, , sra@OM@nyears],
                      maxage = sra@OM@maxage, 
                      R0x = sra@OM@cpars$R0[1], SRrelx = sra@OM@SRrel, Egg0 = sra@Misc[[1]]$EPR0_SR,
-                     hx = sra@OM@cpars$h[1], opt = 2, plusgroup = 1)
+                     hx = sra@OM@cpars$h[1], opt = 2, plusgroup = 1, Perr_mult = Perr_mult)
     return(Fout)
   }
   FF <- seq(0.001, 3, 0.001)
@@ -101,9 +101,9 @@ EM_stock_status <- function(MSE, MP = NULL, model_index = 1) {
 
 #' @export
 plot_EM <- function(MSE, MPs = c("cod_M02", "cod_M02_ra", "cod_MRAMP", "cod_MRAMP_ra"),
-                    model_index = 1, probs = c(0.25, 0.5, 0.75)) {
+                    model_index = 1, probs = c(0.25, 0.5, 0.75), OM_names = NULL) {
   
-  Map_fn <- function(mse, i) {
+  Map_fn <- function(mse, i, OM_names) {
     res <- lapply(MPs, function(x) {
       output <- mfSCA::EM_stock_status(mse, x, model_index = model_index) %>% 
         lapply(function(xx) {
@@ -122,26 +122,31 @@ plot_EM <- function(MSE, MPs = c("cod_M02", "cod_M02_ra", "cod_MRAMP", "cod_MRAM
       if(is.null(out)) {
         return(NULL)
       } else {
-        return(mutate(out, OM = paste0("NR", i)))
+        return(mutate(out, OM = OM_names[i]))
       }
     }) %>% structure(names = c("F_FMSY", "B_BMSY", "rho"))
     
     return(res2)
   }
-  out <- Map(Map_fn, mse = MSE, i = 1:length(MSE))
+  out <- Map(Map_fn, mse = MSE, i = 1:length(MSE), MoreArgs = list(OM_names = OM_names))
   
   out2 <- lapply(c("F_FMSY", "B_BMSY", "rho"), function(x) {
-    do.call(rbind, lapply(out, getElement, x))
+    res <- lapply(out, getElement, x) %>% do.call(rbind, .) 
+    if(!is.null(res)) {
+      mutate(res, OM = factor(OM, levels = OM_names))
+    } else {
+      return(NULL)
+    }
   }) %>% structure(names = c("F_FMSY", "B_BMSY", "rho"))
   return(out2)
 }
 
 #' @export
-plot_OM <- function(MSE, MPs, qlow = 0.25, qhigh = 0.75, yfilter = NULL) {
+plot_OM <- function(MSE, MPs, qlow = 0.25, qhigh = 0.75, yfilter = NULL, OM_names = NULL) {
   
   names_list <- c("F", "SSB", "Catch")
   
-  Map_fn <- function(mse, i, ref, MPs) {
+  Map_fn <- function(mse, i, ref, MPs, OM_names) {
     MP_ind <- match(MPs, mse@MPs)
     
     SSB_hist <- apply(mse@SSB_hist, c(1, 3), sum) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
@@ -163,8 +168,8 @@ plot_OM <- function(MSE, MPs, qlow = 0.25, qhigh = 0.75, yfilter = NULL) {
                          reshape2::melt(varnames = c("quant", "MP", "Year")) %>%
                          group_by(MP, Year) %>% 
                          summarise(med = median(value), low = quantile(value, qlow), 
-                                   high = quantile(value, qhigh)) %>% mutate(OM = paste0("NR", i))
-                       df_out$Year <- df_out$Year + mse@OM$CurrentYr[1] - mse@nyears
+                                   high = quantile(value, qhigh)) %>% 
+                         mutate(OM = OM_names[i], Year = Year + mse@OM$CurrentYr[1] - mse@nyears)
                        if(!is.null(yfilter)) df_out <- filter(df_out, Year >= mse@OM$CurrentYr[1] - yfilter)
                        return(df_out)
                      }, mse = mse) %>%
@@ -172,16 +177,10 @@ plot_OM <- function(MSE, MPs, qlow = 0.25, qhigh = 0.75, yfilter = NULL) {
     return(quants)
   }
   
-  res <- Map(Map_fn, mse = MSE, i = 1:length(MSE), MoreArgs = list(MPs = MPs))
+  res <- Map(Map_fn, mse = MSE, i = 1:length(MSE), MoreArgs = list(MPs = MPs, OM_names = OM_names))
   
-  #if(length(ref) > 0) {
-  #  res <- Map(Map_fn, mse = MSE, i = 1:length(MSE), ref = ref, MoreArgs = list(MPs = MPs))
-  #} else {
-  #  res <- Map(Map_fn, mse = MSE, i = 1:length(MSE), MoreArgs = list(MPs = MPs))
-  #}
-  res2 <- lapply(names_list, function(x) {
-    do.call(rbind, lapply(res, getElement, x))
-  }) %>% structure(names = names_list)
+  res2 <- lapply(names_list, function(x) lapply(res, getElement, x) %>% do.call(rbind, .) %>% 
+                   mutate(OM = factor(OM, levels = OM_names))) %>% structure(names = names_list)
   return(res2)
 }
 

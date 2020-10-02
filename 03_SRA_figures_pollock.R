@@ -19,18 +19,18 @@ compare_SRA(res1, res2, res3, res4, res5,
 
 ################# Compare SSB and R
 
-SSB <- cbind %>% do.call(lapply(list(res1, res2, res3, res4, res5), function(x) x@SSB[1, ]))
-RR <- cbind %>% do.call(lapply(list(res1, res2, res3, res4, res5), function(x) x@Misc[[1]]$R))
+SSB <- cbind %>% do.call(lapply(list(res3, res4, res5, res1, res2), function(x) x@SSB[1, ]))
+RR <- cbind %>% do.call(lapply(list(res3, res4, res5, res1, res2), function(x) x@Misc[[1]]$R))
 
-png("report/pollock/SSB_R.png", height = 6, width = 5, units = "in", res = 400)
+png("report/pollock/SSB_R.png", height = 5, width = 4, units = "in", res = 400)
 par(mar = c(2, 4, 1, 1), oma = c(2, 0, 0, 0), mfrow = c(2, 1))
 
-matplot(1970:2019, SSB, xlab = "Year", type = "l", col = c(1, 3, 4, 5, 2), lty = c(3, 3, 1, 1, 1), lwd = 2, ylim = c(0, 1e6))
+matplot(1970:2019, SSB, xlab = "Year", type = "l", col = c(4, 5, 2, 1, 3), lty = c(1, 1, 1, 3, 3), lwd = 2, ylim = c(0, 1e6))
 abline(h = 0, col = "grey")
-legend("top", c("Base", "FlatSel", "NR1", "NR2", "NR3"), col = c(1, 3, 4, 5, 2), lty = c(3, 3, 1, 1, 1), lwd = 2)
+legend("topright", c("SS", "SWB", "SWF", "Base", "FlatSel"), col = c(4, 5, 2, 1, 3), lty = c(1, 1, 1, 3, 3), lwd = 2, ncol = 2, bty = "n")
 
-matplot(1970:2019, RR, ylab = "Recruitment", xlab = "Year", type = "l", lty = c(3, 3, 1, 1, 1), lwd = 2, 
-        col = c(1, 3, 4, 5, 2), ylim = c(0, 1.1 * max(RR)))
+matplot(1970:2019, RR, ylab = "Recruitment", xlab = "Year", type = "l", lty = c(1, 1, 1, 3, 3), lwd = 2, 
+        col = c(4, 5, 2, 1, 3), ylim = c(0, 1.1 * max(RR)))
 abline(h = 0, col = "grey")
 
 mtext("Year", outer = TRUE, side = 1, line = 1)
@@ -84,7 +84,7 @@ setup(3)
 rr_OM <- sfLapply(list(res3, res4, res5), retrospective, nyr = 7, figure = FALSE)
 rr_EM <- sfLapply(list(res1, res2), retrospective, nyr = 7, figure = FALSE)
 
-model_name <- paste0("NR", 1:3) %>% c("Base", "FlatSel")
+model_name <- c("SS", "SWB", "SWF", "Base", "FlatSel")
 rr_out <- lapply(1:5, function(i, x) x[[i]]@TS[, , 3] %>% reshape2::melt(value.name = "SSB") %>% mutate(Model = model_name[i]), 
                  x = c(rr_OM, rr_EM))
 rr_out <- do.call(rbind, rr_out) %>% mutate(Model = factor(Model, levels = model_name))

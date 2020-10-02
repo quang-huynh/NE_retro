@@ -11,3 +11,20 @@ ref_pt[[1]] <- lapply(1:3, function(i) calc_refpt(SRA[[i]], med_rec = med_rec[i]
 ref_pt[[2]] <- lapply(1:3, function(i) calc_refpt(SRA[[i]], M = "true", med_rec = med_rec[i]))
 saveRDS(ref_pt, file = "GoM_cod/cod_ref_pt.rds")
 
+i = 1
+RR <- SRA[[i]]@mean_fit$report$R[2:38]
+SS <- SRA[[i]]@mean_fit$report$E[1:37]
+Rp <- SRA[[i]]@mean_fit$report$Arec * SS / (1 + SRA[[i]]@mean_fit$report$Brec * SS)
+
+plot(SS, RR, xlim = c(0, 60000),  ylim = c(0, 40000))
+lines(SS, Rp)
+text(SS, RR, labels = 2019 - 36:0, pos = 3)
+abline(h = 0, v = c(0, 0.2 * SRA[[i]]@mean_fit$report$E0_SR), col = 'grey')
+
+
+plot(SS, c(SRA[[i]]@mean_fit$report$log_rec_dev[-1], 0), typ = 'o')
+abline(h = 0, lty = 2)
+
+SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[1:3])
+
+SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[37])

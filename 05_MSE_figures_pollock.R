@@ -3,11 +3,14 @@ library(dplyr)
 library(mfSCA)
 library(ggplot2)
 
+######## OM order
+OM_names <- c("SS", "SWB", "SWF")
+
 ######## Reference points
 ref_pt <- readRDS(file = "pollock/pollock_ref_pt.rds")
 
 ref_pt_plot <- do.call(rbind, lapply(ref_pt, function(i) i[1, ])) %>% as.data.frame()
-ref_pt_plot$OM <- paste0("NR", 1:3)
+ref_pt_plot$OM <- OM_names
 
 ######## Load MSE
 MSE <- lapply(1:3, function(i) readRDS(paste0("pollock/MSE_pollock_NR", i, ".rds")))
@@ -26,7 +29,7 @@ MSE <- lapply(1:3, function(x) {
 
 
 ######## Plot OM
-resOM <- plot_OM(MSE, MPs = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSY"), 0.10, 0.90, yfilter = 10)
+resOM <- plot_OM(MSE, MPs = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSY"), 0.10, 0.90, yfilter = 10, OM_names = OM_names)
 
 no_legend <- theme(legend.position = "none")
 no_panel_gap <- theme(panel.spacing = unit(0, "in"))
@@ -64,27 +67,26 @@ ggsave("report/pollock/MSE_OM_C.png", height = 3.5, width = 8.5)
 
 ####### Plot rho 
 res <- list()
-res[[1]] <- plot_EM(MSE, MPs = c("base", "base_ra", "flatsel", "flatsel_ra")) %>% 
+res[[1]] <- plot_EM(MSE, MPs = c("base", "base_ra", "flatsel", "flatsel_ra"), OM_names = OM_names) %>% 
   lapply(function(x) {
     x$EM <- ifelse(substr(x$MP, nchar(x$MP)-1, nchar(x$MP)) == "ra", 
                    substr(x$MP, 1, nchar(x$MP)-3), x$MP)
     return(x)
   })
 
-res[[2]] <- plot_EM(MSE, MPs = "ma") %>% lapply(function(x) cbind(x, EM = "base"))
-res[[3]] <- plot_EM(MSE, MPs = "ma", model_index = 2) %>% 
+res[[2]] <- plot_EM(MSE, MPs = "ma", OM_names = OM_names) %>% lapply(function(x) cbind(x, EM = "base"))
+res[[3]] <- plot_EM(MSE, MPs = "ma", OM_names = OM_names, model_index = 2) %>% 
   lapply(function(x) cbind(x, EM = "flatsel"))
 
-res[[4]] <- plot_EM(MSE, MPs = "75%FMSY")
+res[[4]] <- plot_EM(MSE, MPs = "75%FMSY", OM_names = OM_names)
 res[[4]][[3]] <- cbind(res[[4]][[3]], EM = "base")
 
-res[[5]] <- plot_EM(MSE, MPs = "75%FMSY", model_index = 2)
+res[[5]] <- plot_EM(MSE, MPs = "75%FMSY", OM_names = OM_names, model_index = 2)
 res[[5]][[3]] <- cbind(res[[5]][[3]], EM = "flatsel")
 
 out <- lapply(c("F_FMSY", "B_BMSY", "rho"), function(x) {
-  y <- do.call(rbind, lapply(res, getElement, x))
-  y$MP <- factor(y$MP, levels = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSY"))
-  return(y)
+  lapply(res, getElement, x) %>% do.call(rbind, .) %>% 
+    mutate(MP = factor(MP, levels = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSY")))
 })
 
 ggplot(out[[3]] %>% filter(Year > 2020), aes(Year, y = `50%`, ymin = `25%`, ymax = `75%`, shape = EM)) + facet_grid(OM ~ MP, scales = "free_y") + 
@@ -92,7 +94,8 @@ ggplot(out[[3]] %>% filter(Year > 2020), aes(Year, y = `50%`, ymin = `25%`, ymax
   geom_point(size = 1.25) + geom_linerange(size = 0.5) + 
   ylab(expression(rho[SSB])) + theme(legend.position = "bottom") +
   scale_x_continuous(breaks = c(2020, 2040, 2060)) + scale_shape_manual(values = c(16, 1)) +
-  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave("report/pollock/MSE_EM_rho.png", height = 4, width = 6.5)
 
 
@@ -122,19 +125,18 @@ ggplot(Ind[[2]], aes(Year, y = `50%`, ymin = `25%`, ymax = `75%`)) + facet_grid(
 
 ######## Performance metric
 PM_fn <- function(x, y) {
-  out <- data.frame(MP = x@MPs, 
-                    PNOF = PNOF(x)@Mean, 
-                    PB50 = P50(x)@Mean, 
-                    POY = LTY(x, Ref = 1, Yrs = c(1, 50))@Mean,
-                    STOY = LTY(x, Ref = 1, Yrs = c(1, 20))@Mean,
-                    stringsAsFactors = FALSE)  %>% 
-    filter(MP != "FMSYref" & MP != "FMSYref75" & MP != "NFref")
-  out$OM <- paste0("NR", y)
-  
-  out %>% reshape2::melt(id.vars = c("MP", "OM"), variable.name = "PM")
+  data.frame(MP = x@MPs, 
+             PNOF = PNOF(x)@Mean, 
+             PB50 = P50(x)@Mean, 
+             POY = LTY(x, Ref = 1, Yrs = c(1, 50))@Mean,
+             STOY = LTY(x, Ref = 1, Yrs = c(1, 20))@Mean,
+             stringsAsFactors = FALSE)  %>% 
+    filter(MP != "FMSYref" & MP != "FMSYref75" & MP != "NFref") %>%
+    mutate(OM = y) %>% 
+    reshape2::melt(id.vars = c("MP", "OM"), variable.name = "PM")
 }
 
-pm <- do.call(rbind, Map(PM_fn, x = MSE, y = 1:3)) %>% filter(PM != "STOY") %>% 
+pm <- Map(PM_fn, x = MSE, y = OM_names) %>% do.call(rbind, .) %>% filter(PM != "STOY") %>% 
   mutate(MP = factor(MP, levels = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSY")),
          label = ifelse(value > 0.99, ">99", ifelse(value < 0.01, "<1", round(100 * value, 0))) %>% paste0("%"))
 
@@ -145,6 +147,63 @@ ggplot(pm %>% filter(PM != "STOY"), aes(PM, value, shape = PM)) + facet_grid(OM 
   coord_cartesian(ylim = c(0, 1.1)) + scale_y_continuous(breaks = seq(0, 1, by = 0.25))
 ggsave("report/pollock/PM.png", height = 4, width = 6.5)
 
+# Trade - off
+pm2 <- reshape2::dcast(pm, MP + OM ~ PM)
+ggplot(pm2, aes(PB50, POY, label = MP)) + facet_wrap(~OM) + geom_point() + ggrepel::geom_text_repel()
+
+Yield_fn <- function(MSE, Yrs = c(1, 10), MPs = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSY"),
+                     OM_names = "OM", Cbias = 1) {
+  geo_mean <- function(x) (sum(log(x))/length(x)) %>% exp()
+  CC <- (MSE@C[, match(MPs, MSE@MPs), Yrs[1]:Yrs[2], drop = FALSE]/Cbias) %>% apply(2, geo_mean)
+  data.frame(MP = MPs, OM = OM_names, MeanC = CC)
+}
+
+color_fn <- function(x) {
+  y <- rep(0, length(x))
+  y[grep("base", x)] <- 1
+  y[grep("flatsel", x)] <- 2
+  return(y)
+}
+
+ypm <- Map(Yield_fn, MSE = MSE, OM_names = OM_names) %>% do.call(rbind, .) %>% 
+  left_join(pm2, by = c("MP", "OM")) %>% 
+  mutate(OM = factor(OM, levels = OM_names), col = color_fn(MP), 
+         label = ifelse(PB50 > 0.99, ">99", ifelse(PB50 < 0.01, "<1", round(100 * PB50, 0))) %>% paste0(MP, " (", ., "%)"),
+         PNOF = 100 * PNOF)
+
+ggplot(ypm, aes(PNOF, MeanC, label = label, colour = factor(col), shape = factor(col))) + facet_grid(OM~., scales = "free_y") + 
+  geom_point(size = 2) + ggrepel::geom_text_repel(size = 2.5) + 
+  scale_shape_manual(values = c(8, 1, 16)) + coord_cartesian(xlim = c(0, 100), ylim = c(15e3, 30e3)) + 
+  xlab("PNOF (%)") + ylab("Observed short-term catch") + 
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom + no_legend
+ggsave("report/pollock/pm_tradeoff.png", width = 3, height = 5)
+
+
+
+#ypm <- Map(Yield_fn, MSE = MSE, OM_names = OM_names) %>% do.call(rbind, .) %>% 
+#  left_join(pm2, by = c("MP", "OM")) %>% 
+#  mutate(OM = factor(OM, levels = OM_names), col = color_fn(MP), 
+#         label = ifelse(PNOF > 0.99, ">99", ifelse(PNOF < 0.01, "<1", round(100 * PNOF, 0))) %>% paste0(MP, " (", ., "%)"),
+#         PB50 = 100 * PB50)
+#
+#ggplot(ypm, aes(PB50, MeanC, label = label, colour = factor(col), shape = factor(col))) + facet_grid(OM~., scales = "free_y") + 
+#  geom_point(size = 2) + ggrepel::geom_text_repel(size = 2.5) + 
+#  scale_shape_manual(values = c(8, 1, 16)) + coord_cartesian(xlim = c(0, 100), ylim = c(15e3, 30e3)) + 
+#  xlab("PB50 (%)") + ylab("Observed short-term catch") + 
+#  gfplot::theme_pbs() + no_panel_gap + legend_bottom + no_legend
+#ggsave("report/pollock/pm_tradeoff.png", width = 3, height = 5)
+
+
+
+#ypm <- Map(Yield_fn, MSE = MSE, OM_names = OM_names) %>% do.call(rbind, .) %>% 
+#  left_join(pm, by = c("MP", "OM")) %>% mutate(col = color_fn(MP))
+#ggplot(ypm %>% filter(PM == "PNOF" | PM == "PB50"), aes(value, MeanC, label = MP, colour = factor(col), shape = factor(col))) + 
+#  facet_grid(OM ~ PM) + geom_point() + 
+#  ggrepel::geom_text_repel(size = 2.5) + 
+#  scale_shape_manual(values = c(8, 1, 16)) + coord_cartesian(ylim = c(15e3, 30e3)) + xlab("Performance metric") + 
+#  ylab("Observed short-term catch") + 
+#  gfplot::theme_pbs() + no_panel_gap + legend_bottom + no_legend
+#ggsave("report/pollock/pm_tradeoff.png", width = 5, height = 5)
 
 
 
@@ -152,8 +211,9 @@ ggsave("report/pollock/PM.png", height = 4, width = 6.5)
 s_CAA_hist <- get_pollock_base()$data$s_CAA
 indicators_raw <- lapply(1:length(MSE), get_indicators, ind_interval = 6, MSE = MSE, 
                          MPs = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSY"), s_CAA_hist = s_CAA_hist,
-                         mah_ind = c("SSB_rho", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp"))
-indicators <- do.call(rbind, lapply(indicators_raw, getElement, 1))
+                         OM_names = OM_names,
+                         mat_age = c(0.88, 0.294, 0.643, 0.887, 0.971, 0.993, 0.998, 1, 1))
+indicators <- do.call(rbind, lapply(indicators_raw, getElement, 1)) %>% mutate(value = ifelse(grepl("mu", Ind), exp(value), value))
 
 
 # Mahalanobis
@@ -215,18 +275,18 @@ ggplot(filter(indicators_ts, grepl("1", Ind) | grepl("rho", Ind) | grepl("Cat", 
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 
 # TS to plot
-indicators_plot <- indicators_ts %>%
-  filter(match(Ind, c("SSB_rho", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp"), nomatch = 0) %>% as.logical()) %>%
+Ind_order <- c("SSB_rho", "Cat_mu", "Ind_1_mu", "MAge_1_mu", "PMat_1_mu")
+Ind_order2 <- c("rho", "Catch", "Index", "Mean Age", "Prop. Mature")
+indicators_plot <- filter(indicators_ts, match(Ind, Ind_order, nomatch = 0) %>% as.logical()) %>%
   mutate(MP = factor(MP, levels = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSY"))) %>%
+  left_join(data.frame(Ind = Ind_order, Ind2 = factor(Ind_order2, levels = Ind_order2))) %>%
   mutate(Ind = factor(Ind, levels = c("SSB_rho", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp"))) #%>% filter(Year >= 2024)
-ggplot(indicators_plot, aes(x = Year, shape = OM, colour = OM)) + 
-  facet_grid(Ind ~ MP, scales = "free_y") + 
-  geom_hline(data = data.frame(Ind = factor(c("SSB_rho", "Cat_slp", "Ind_1_slp", "MAge_1_slp"),
-                                            levels = c("SSB_rho", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp")), yy = 0), 
-             aes(yintercept = yy), linetype = 2) + 
-  geom_ribbon(aes(ymin = ymin, ymax = ymax, fill = OM), alpha = 0.1) + 
-  geom_point(aes(y = y)) + geom_line(aes(y = y)) + 
-  xlab("Year") + ylab("Indicator Value") + scale_x_continuous(breaks = c(2020, 2040, 2060)) +
+ggplot(indicators_plot, aes(x = Year, shape = OM)) + 
+  geom_hline(data = data.frame(Ind2 = factor("rho", levels = Ind_order2), yy = 0), aes(yintercept = yy), linetype = 2) + 
+  geom_point(aes(colour = OM, y = y)) + geom_line(aes(colour = OM, y = y)) + 
+  geom_ribbon(aes(ymin = ymin, ymax = ymax, fill = OM), alpha = 0.3) +
+  facet_grid(Ind2 ~ MP, scales = "free_y") +  
+  xlab("Year") + ylab("Predicted indicator value") + scale_x_continuous(breaks = c(2020, 2040, 2060)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/pollock/indicator_ts.png", height = 7, width = 7)
 
@@ -272,3 +332,34 @@ ggplot(out, aes(Year, slp, shape = MP)) + geom_line() + geom_point() +
   geom_hline(yintercept = 0, linetype = 2) + labs(y = "Regression slope") + 
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/pollock/indicator_slope.png", height = 3, width = 4)
+
+
+#### Plot recruitment
+SRA <- lapply(1:3, function(i) readRDS(paste0("pollock/SRA_NR", i, ".rds")))
+
+plot_recruitment <- function(MSE, SRA, OM_names, MPs) {
+  #Rhist <- lapply(SRA@Misc, getElement, "R") %>% do.call(rbind, .)
+  SSBpred <- MSE@SSB[, match(MPs, MSE@MPs), , drop = FALSE] %>% aperm(c(1, 3, 2))
+  Rdevpred <- SRA@OM@cpars$Perr_y[, -c(1:(SRA@OM@maxage - 1 + MSE@nyears))] %>% as.vector()
+  Arec <- vapply(SRA@Misc, getElement, numeric(1), "Arec")
+  Brec <- vapply(SRA@Misc, getElement, numeric(1), "Brec")
+  Rpred <- (Arec * SSBpred / (1 + Brec * SSBpred) * Rdevpred) %>% 
+    structure(dimnames = list(Sim = 1:MSE@nsim, Time = 1:MSE@proyears, MP = MPs)) %>%
+    reshape2::melt(value.name = "R") %>% mutate(Year = Time + MSE@OM$CurrentYr, Time = NULL, OM = OM_names)
+  Rhist <- data.frame(R = SRA@mean_fit$report$R, Year = MSE@OM$CurrentYr[1] + 1 - (MSE@nyears):0, OM = OM_names)
+  return(list(Rpred = Rpred, Rhist = Rhist))
+}
+
+rec <- Map(plot_recruitment, MSE = MSE, SRA = SRA, OM_names = OM_names,
+           MoreArgs = list(MPs = c("base", "base_ra", "flatsel", "flatsel_ra", "ma", "75%FMSYref")))
+
+recpred <- lapply(rec, getElement, "Rpred") %>% do.call(rbind, .) %>% group_by(MP, OM, Year) %>% summarise(R = mean(R)) %>%
+  mutate(OM = factor(OM, levels = OM_names))
+rhist <- lapply(rec, getElement, "Rhist") %>% do.call(rbind, .) %>% mutate(OM = factor(OM, levels = OM_names)) %>%
+  filter(Year >= 2009)
+
+ggplot(recpred, aes(Year, R)) + geom_line(aes(colour = MP)) + geom_point(aes(colour = MP, shape = MP)) + 
+  facet_grid(OM ~ .) + geom_line(data = rhist) +
+  geom_vline(xintercept = 2018, linetype = 2) + labs(y = "Recruitment") + 
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+ggsave("report/pollock/mean_recruitment.png", width = 3, height = 4.5)  

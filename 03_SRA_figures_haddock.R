@@ -13,6 +13,16 @@ compare_SRA(res1, res2, res3, res4, dir = getwd(),
             scenario = list(names = c("Base", "Index omit", "Index precise", "M decrease")))
 
 
+res5 <- readRDS(file = "GoM_haddock/SRA_NR4.rds")
+res6 <- readRDS(file = "GoM_haddock/SRA_NR5.rds")
+
+compare_SRA(res1, res2, res3, res4, res5, res6, dir = getwd(),
+            filename = "report/GoM_haddock/compare_haddock2", title = "ASAP3 haddock comparison",
+            s_name = c("NEFSCspring", "NEFSCfall"), open_file = FALSE,
+            scenario = list(names = c("Base", "Index omit", "Index precise", "M decrease", "Index q", "Index q High catch")))
+
+
+
 ################# Compare SSB and R
 
 SSB <- cbind %>% do.call(lapply(list(res1, res2, res3, res4), function(x) x@SSB[1, ]))
