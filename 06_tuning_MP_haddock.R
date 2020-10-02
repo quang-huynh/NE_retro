@@ -31,16 +31,15 @@ MSE <- lapply(1:3, function(x) {
 ######## FM df
 FM <- lapply(1:3, function(x) MSE[[x]]@FM[, 1, ] %>% 
                structure(dimnames = list(Sim = 1:MSE[[x]]@nsim, Year = MSE[[x]]@OM$CurrentYr[1] + 1:MSE[[x]]@proyears)) %>%
-               reshape2::melt(value.name = "FM") %>% mutate(F_FMSY = FM/MSE[[x]]@OM$FMSY[1], OM = paste0("NR", x)))
-FM <- do.call(rbind, FM)
+               reshape2::melt(value.name = "FM") %>% mutate(F_FMSY = FM/MSE[[x]]@OM$FMSY[1], OM = paste0("NR", x))) %>% do.call(rbind, .)
 
 ######## Generate indicators
 s_CAA_hist <- get_haddock()$data$s_CAA
 indicators_raw <- lapply(1:length(MSE), get_indicators, ind_interval = 6, MSE = MSE, 
-                         MPs = c("tuning_MP"), Cbias = c(2.25, 1.25, 1), s_CAA_hist = s_CAA_hist,
+                         MPs = c("tuning_MP"), s_CAA_hist = s_CAA_hist,
                          mah_ind = c("MAge_1_slp", "MAge_1_mu", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp"),
                          Year_vec = seq(MSE[[1]]@nyears, MSE[[1]]@nyears + MSE[[1]]@proyears, 3))
-indicators <- do.call(rbind, lapply(indicators_raw, getElement, 1)) %>% mutate(MP = NULL) %>% left_join(FM) %>% 
+indicators <- lapply(indicators_raw, getElement, 1) %>% do.call(rbind, .) %>% mutate(MP = NULL) %>% left_join(FM) %>% 
   filter(!is.na(value) & Year > 2020 & (grepl("Cat", Ind) | grepl("1", Ind)))
 indicators_cast <- reshape2::dcast(indicators, Sim + OM + Year + FM + F_FMSY ~ Ind, value.var = "value") %>% mutate(Year = factor(Year))
 
@@ -60,7 +59,7 @@ ggplot(indicators, aes(value, F_FMSY)) + geom_point(aes(colour = OM, shape = OM)
 
 
 ######### Plot mah
-mah <- do.call(rbind, lapply(indicators_raw, getElement, 2)) %>% left_join(FM)
+mah <- lapply(indicators_raw, getElement, 2) %>% do.call(rbind, .) %>% left_join(FM)
 
 ggplot(mah, aes(value, F_FMSY)) + facet_wrap(~ Year, scales = "free_x") + geom_point(aes(colour = OM, shape = OM)) +
   coord_cartesian(ylim = c(0, 2)) +
@@ -77,4 +76,6 @@ rr <- glm(ifelse(F_FMSY > 1, 1, 0) ~ Cat_mu + Year, data = indicators_cast, fami
 rr2 <- glm(ifelse(F_FMSY > 1, 1, 0) ~ Cat_mu * Year + Year * Ind_1_mu, data = indicators_cast, family = "binomial")
 rr3 <- glm(ifelse(F_FMSY > 1, 1, 0) ~ Ind_1_mu * Year, data = indicators_cast, family = "binomial")
 rr4 <- glm(ifelse(F_FMSY > 1, 1, 0) ~ Cat_mu * Year, data = indicators_cast, family = "binomial")
+rr5 <- glm(ifelse(F_FMSY > 1, 1, 0) ~ Ind_1_slp * Year, data = indicators_cast, family = "binomial")
+rr6 <- glm(ifelse(F_FMSY > 1, 1, 0) ~ Ind_1_slp * Year + Ind_1_mu * Year, data = indicators_cast, family = "binomial")
 AIC(rr, rr2, rr3, rr4)
