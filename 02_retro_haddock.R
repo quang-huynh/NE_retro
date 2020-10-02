@@ -133,6 +133,73 @@ saveRDS(NR3[[1]][[1]], file = "GoM_haddock/SRA_NR3.rds")
 
 
 
+# I mult
+Imult <- seq(0.1, 0.95, 0.05)
+ret_Imult <- list()
+ret_Imult[[1]] <- sfClusterApplyLB(Imult, eval_retro, type = "index_mult", years = 39:42, args = args) # Multiply for most recent 4 years
+ret_Imult[[2]] <- sfClusterApplyLB(Imult, eval_retro, type = "index_mult", years = 38:42, args = args) # 5
+ret_Imult[[3]] <- sfClusterApplyLB(Imult, eval_retro, type = "index_mult", years = 37:42, args = args) # 6
+
+rho <- cbind %>% do.call(lapply(ret_Imult, function(x) vapply(x, function(xx) summary(xx[[2]])[2, 1], numeric(1))))
+
+png("report/GoM_haddock/haddock_Imult_ret.png", height = 6, width = 5, units = 'in', res = 400)
+par(mfrow = c(2, 1), mar = c(5, 4, 1, 1))
+matplot(1977:2018, args$data$Index, col = "black", typ = "o", lty = 1:2, pch = c(16, 1), xlab = "Year", ylab = "Index")
+matlines(2015:2018, 0.25 * args$data$Index[39:42, ], col = "red", typ = "o", lty = 1:2, pch = c(16, 1))
+legend("topleft", c("NEFSCspring", "NEFSCfall"), lty = 1:2, pch = c(16, 1))
+
+matplot(Imult, rho, typ = 'o', pch = 16, xlab = "Index multiplier", ylab = "SSB Mohn's rho", col = 2:4)
+legend("topright", c('2015-2018', '2014-2018', '2013-2018'), col = 2:4, pch = 16)
+abline(h = 0)
+
+dev.off()
+
+# Generate OM
+args <- get_haddock(100, h = 0.74)
+NR4 <- lapply(0.3, eval_retro, type = "index_mult", years = 39:42, args = args) 
+saveRDS(NR4[[1]][[1]], file = "GoM_haddock/SRA_NR4.rds")
+
+
+
+# Both Imult = 0.4 and profile for Cmult
+c_mult <- seq(0.25, 0.75, 0.05)
+ret_M_mult <- list()
+ret_M_mult[[1]] <- sfClusterApplyLB(c_mult, eval_retro, type = c("catch_mult", "index_mult"), y = 0.4, years_I = 39:42, years = 26:42, args = args)  # Multiply for mo
+ret_M_mult[[2]] <- sfClusterApplyLB(c_mult, eval_retro, type = c("catch_mult", "index_mult"), y = 0.4, years_I = 39:42, years = 31:42, args = args) # 5
+ret_M_mult[[3]] <- sfClusterApplyLB(c_mult, eval_retro, type = c("catch_mult", "index_mult"), y = 0.4, years_I = 39:42, years = 36:42, args = args) # 15
+
+
+png("report/GoM_haddock/haddock_ImultCmult_ret.png", height = 6, width = 5, units = 'in', res = 400)
+
+par(mfrow = c(2, 1), mar = c(5, 4, 1, 1))
+plot(1977:2018, ret_M_mult[[1]][[10]][[1]]@data$Chist[, 1], col = "red", typ = "o", pch = 16, xlab = "Year", ylab = "Catch")
+lines(1977:2018, args$data$Chist, col = "black", typ = "o", pch = 16)
+legend("topleft", c("Base", "Cmult = 0.7"), col = c("black", "red"), pch = 16)
+
+rho <- cbind %>% do.call(lapply(ret_M_mult, function(x) vapply(x, function(xx) summary(xx[[2]])[2, 1], numeric(1))))
+matplot(c_mult, rho, typ = 'o', pch = 16, xlab = "Catch multiplier", ylab = "SSB Mohn's rho", col = 2:4)
+abline(h = 0)
+legend("topright", c('2002-2018', '2007-2018', '2012-2018'), col = 2:4, pch = 16)
+dev.off()
+
+# Generate OM
+args <- get_haddock(100, h = 0.74)
+args$resample <- TRUE
+NR5 <- lapply(0.7, eval_retro, type = c("catch_mult", "index_mult"), y = 0.4, years_I = 39:42, years = 26:42, args = args)
+saveRDS(NR5[[1]][[1]], file = "GoM_haddock/SRA_NR5.rds")
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
