@@ -140,7 +140,7 @@ ggsave("report/GoM_cod/MSE_EM_rho.png", height = 4, width = 6.5)
 PM_fn <- function(x, y) {
   data.frame(MP = x@MPs, 
              PNOF = PNOF(x)@Mean, 
-             PB50 = P50(x, Yrs = c(30, 50))@Mean, 
+             PB50 = P50(x)@Mean, 
              POY = LTY(x, Ref = 1, Yrs = c(1, 50))@Mean,
              STOY = LTY(x, Ref = 1, Yrs = c(1, 20))@Mean,
              stringsAsFactors = FALSE) %>%
@@ -192,7 +192,8 @@ ypm <- Map(Yield_fn, MSE = MSE[OM_order], OM_names = OM_names[OM_order], Cbias =
 
 ggplot(ypm, aes(PNOF, MeanC, label = label, colour = factor(col), shape = factor(col))) + facet_grid(OM~., scales = "free_y") + 
   geom_point(size = 2) + ggrepel::geom_text_repel(size = 2.5) + 
-  scale_shape_manual(values = c(8, 1, 16)) + coord_cartesian(ylim = c(0, 1e3)) + xlab("PNOF (%)") + ylab("Observed short-term catch") + 
+  scale_shape_manual(values = c(8, 1, 16)) + coord_cartesian(ylim = c(0, 1.1e3)) + xlab("PNOF (%)") + ylab("Observed short-term catch") +
+  scale_y_continuous(breaks = seq(0, 1000, 250)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom + no_legend
 ggsave("report/GoM_cod/pm_tradeoff.png", width = 3, height = 5)
 
