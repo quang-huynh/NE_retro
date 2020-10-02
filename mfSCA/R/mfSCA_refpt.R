@@ -75,7 +75,7 @@ mf_SCA_ref_pt <- function(SRA_out, R_proxy, F_proxy = c("SPR", "F01", "Fmax"), S
 }
 
 MSYCalcs <- function(logF, M_at_Age, Wt_at_Age, Mat_at_Age, V_at_Age, maxage, 
-                     R0x, SRrelx, Egg0, hx, opt = 1, plusgroup = 0) {
+                     R0x, SRrelx, Egg0, hx, opt = 1, plusgroup = 0, Perr_mult = 1) {
   FF <- exp(logF)
   lx <- rep(1, maxage)
   surv <- exp(-M_at_Age - FF * V_at_Age)
@@ -90,15 +90,15 @@ MSYCalcs <- function(logF, M_at_Age, Wt_at_Age, Mat_at_Age, V_at_Age, maxage,
   BF <- sum(lx * Wt_at_Age)
   hx[hx > 0.999] <- 0.999
   recK <- (4 * hx)/(1 - hx)
-  reca <- recK/Egg0
+  reca <- Perr_mult * recK/Egg0
   SPR <- EggF/Egg0
   if (SRrelx == 1) {
-    recb <- (reca * Egg0 - 1)/(R0x * Egg0)
+    recb <- (5 * hx - 1)/(1 - hx)/(R0x * Egg0)
     RelRec <- (reca * EggF - 1)/(recb * EggF)
   }
   if (SRrelx == 2) {
     bR <- (log(5 * hx)/(0.8 * Egg0))
-    aR <- exp(bR * Egg0)/(Egg0/R0x)
+    aR <- Perr_mult * exp(bR * Egg0)/(Egg0/R0x)
     RelRec <- (log(aR * EggF/R0x))/(bR * EggF/R0x)
   }
   RelRec[RelRec < 0] <- 0
@@ -118,7 +118,7 @@ MSYCalcs <- function(logF, M_at_Age, Wt_at_Age, Mat_at_Age, V_at_Age, maxage,
 }
 
 optMSY <- function(x, M_ageArray, Wt_age, Mat_age, V, maxage, R0, SRrel, 
-                   hs, SSBPR0, yr.ind = 1, plusgroup = 0) {
+                   hs, SSBPR0, yr.ind = 1, plusgroup = 0, Perr_mult = 1) {
   if (length(yr.ind) == 1) {
     M_at_Age <- M_ageArray[x, , yr.ind]
     Wt_at_Age <- Wt_age[x, , yr.ind]
@@ -134,9 +134,9 @@ optMSY <- function(x, M_ageArray, Wt_age, Mat_age, V, maxage, R0, SRrel,
   boundsF <- c(1e-08, 3)
   doopt <- optimise(MSYCalcs, log(boundsF), M_at_Age, Wt_at_Age, 
                     Mat_at_Age, V_at_Age, maxage, R0x = R0[x], SRrelx = SRrel[x], Egg0 = SSBPR0[x],
-                    hx = hs[x], opt = 1, plusgroup = plusgroup)
+                    hx = hs[x], opt = 1, plusgroup = plusgroup, Perr_mult = Perr_mult)
   MSYs <- MSYCalcs(doopt$minimum, M_at_Age, Wt_at_Age, Mat_at_Age, 
                    V_at_Age, maxage, R0x = R0[x], SRrelx = SRrel[x], Egg0 = SSBPR0[x], hx = hs[x], 
-                   opt = 2, plusgroup = plusgroup)
+                   opt = 2, plusgroup = plusgroup, Perr_mult = Perr_mult)
   return(MSYs)
 }
