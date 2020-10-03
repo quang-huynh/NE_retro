@@ -236,7 +236,86 @@ indicators_raw <- lapply(1:length(MSE), get_indicators, ind_interval = 6, MSE = 
                          MPs = c("M02", "M02_ra", "MRAMP", "MRAMP_ra", "ma", "75%FMSY"), Cbias = c(2.25, 1.25, 1), s_CAA_hist = s_CAA_hist,
                          OM_names = OM_names[OM_order],
                          mat_age = c(0.09, 0.32, 0.70, 0.92, 0.98, 1.00, 1.00, 1.00, 1.00))
-indicators <- do.call(rbind, lapply(indicators_raw, getElement, 1)) %>% mutate(value = ifelse(grepl("mu", Ind), exp(value), value))
+indicators <- do.call(rbind, lapply(indicators_raw, getElement, 1)) #%>% mutate(value = ifelse(grepl("mu", Ind), exp(value), value))
+
+indicators_cast <- indicators %>% reshape2::dcast(Year + MP + OM + Sim ~ Ind, value.var = "value") 
+
+######### LDA
+rr <- lda(OM ~ Ind_1_mu * Year + SSB_rho * Year + PMat_1_mu * Year + MAge_1_mu * Year, 
+          data = filter(indicators_cast, Year > 2018 & MP == "M02_ra") %>% mutate(Year = factor(Year)))
+
+# Index vs. rho
+rr <- lda(OM ~ Ind_1_mu * Year + SSB_rho * Year, 
+          data = filter(indicators_cast, Year > 2018 & MP == "M02_ra") %>% mutate(Year = factor(Year)))
+rr_grid <- expand.grid(Year = table(indicators_cast$Year)[-1] %>% names(),
+                       Ind_1_mu = seq(-2, 10, 0.25), SSB_rho = seq(-1, 3, 0.25)) 
+rr_pred <- predict(rr, newdata = rr_grid) %>% getElement("posterior") %>% as.data.frame() %>% cbind(rr_grid)
+
+ggplot(rr_pred, aes(Ind_1_mu, SSB_rho)) + facet_wrap(~ Year) + geom_raster(aes(fill = MC)) + 
+  gfplot::theme_pbs() + no_panel_gap
+ggplot(indicators_cast %>% filter(MP == "M02_ra" & Year > 2018), aes(Ind_1_mu, SSB_rho, colour = OM)) + facet_wrap(~ Year) + geom_point() +
+  coord_cartesian(xlim = c(-2, 10), ylim = c(-1, 3))
+
+
+# Mean age
+rr <- lda(OM ~ MAge_1_mu * Year + SSB_rho * Year,
+          data = filter(indicators_cast, Year > 2018 & MP == "M02") %>% mutate(Year = factor(Year)))
+rr_grid <- expand.grid(Year = table(indicators_cast$Year)[-1] %>% names(),
+                       MAge_1_mu = seq(1.2, 1.8, 0.025), SSB_rho = seq(-1, 3, 0.25)) 
+rr_pred <- predict(rr, newdata = rr_grid) %>% getElement("posterior") %>% as.data.frame() %>% cbind(rr_grid)
+
+ggplot(rr_pred, aes(MAge_1_mu, SSB_rho)) + facet_wrap(~ Year) + geom_raster(aes(fill = MC)) + 
+  gfplot::theme_pbs() + no_panel_gap
+ggplot(indicators_cast %>% filter(MP == "M02" & Year > 2018), aes(MAge_1_mu, SSB_rho, colour = OM)) + facet_wrap(~ Year) + geom_point() +
+  coord_cartesian(ylim = c(-1, 3))
+
+
+# Prop. mature age
+rr <- lda(OM ~ PMat_1_mu * Year + SSB_rho * Year, 
+          data = filter(indicators_cast, Year > 2018 & MP == "M02") %>% mutate(Year = factor(Year)))
+rr_grid <- expand.grid(Year = table(indicators_cast$Year)[-1] %>% names(),
+                       PMat_1_mu = seq(-0.5, -0.1, 0.01), SSB_rho = seq(-1, 3, 0.25)) 
+rr_pred <- predict(rr, newdata = rr_grid) %>% getElement("posterior") %>% as.data.frame() %>% cbind(rr_grid)
+
+#ggplot(rr_pred, aes(PMat_1_mu, SSB_rho)) + facet_wrap(~ Year) + geom_raster(aes(fill = MC)) + 
+#  gfplot::theme_pbs() + no_panel_gap
+ggplot(indicators_cast %>% filter(MP == "M02" & Year > 2018), aes(PMat_1_mu, SSB_rho)) + facet_wrap(~ Year) + 
+  geom_point(aes(colour = OM), alpha = 0.8) +
+  geom_contour(data = rr_pred, aes(z = MC), colour = "grey70") + 
+  metR::geom_text_contour(data = rr_pred, skip = 1, rotate = TRUE, check_overlap = TRUE, colour = "black", aes(z = MC)) +
+  coord_cartesian(xlim = c(-0.5, -0.1), ylim = c(-1, 3)) + labs(x = "Prop. mature", y = "rho") +
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+ggsave("report/GoM_cod/indicators_LDA.png", width = 7, height = 7)
+
+
+#### All MPs for rho vs. Prop mature for 3 years
+MPs <- c("M02", "M02_ra", "MRAMP", "MRAMP_ra", "ma")
+Yind <- c(2024, 2030, 2036)
+rr_pred <- list()
+for(i in 1:length(MPs)) {
+  rr <- MASS::lda(OM ~ PMat_1_mu * Year + SSB_rho * Year, 
+                  data = filter(indicators_cast, Year > 2018 & MP == MPs[i]) %>% mutate(Year = factor(Year)))
+  rr_grid <- expand.grid(Year = table(indicators_cast$Year)[-1] %>% names(),
+                         PMat_1_mu = seq(-0.5, -0.1, 0.01), SSB_rho = seq(-1, 3, 0.25)) 
+  
+  rr_pred[[i]] <- predict(rr, newdata = rr_grid) %>% getElement("posterior") %>% as.data.frame() %>% cbind(rr_grid) %>%
+    mutate(MP = MPs[i])
+}
+rr_pred2 <- do.call(rbind, rr_pred) %>% mutate(MP = factor(MP, levels = MPs)) %>% 
+  filter(match(Year, Yind, nomatch = 0) %>% as.logical())
+
+ggplot(indicators_cast %>% filter(MP != "75%FMSY" & match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
+  mutate(MP = factor(MP, levels = MPs)), aes(PMat_1_mu, SSB_rho)) + 
+  facet_grid(Year ~ MP) + geom_hline(yintercept = 0, linetype = 3) + geom_point(aes(colour = OM), alpha = 0.6) +
+  geom_contour(data = rr_pred2, aes(z = MC), colour = "grey70") + 
+  metR::geom_text_contour(data = rr_pred2, skip = 1, rotate = TRUE, check_overlap = TRUE, colour = "black", aes(z = MC)) +
+  coord_cartesian(xlim = c(-0.5, -0), ylim = c(-1, 3)) + labs(x = "Prop. mature (log)", y = expression(rho[SSB])) +
+  scale_x_continuous(breaks = c(-0.4, -0.2, 0)) +
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+ggsave("report/GoM_cod/indicators_LDA2.png", width = 6, height = 4)
+
+
+
 
 # Mahalanobis
 #mah <- do.call(rbind, lapply(indicators_raw, getElement, 2))
@@ -316,8 +395,8 @@ ggplot(indicators_plot, aes(x = Year, shape = OM)) +
   geom_ribbon(aes(ymin = ymin, ymax = ymax, fill = OM), alpha = 0.3) +
   facet_grid(Ind2 ~ MP, scales = "free_y") +  
   xlab("Year") + ylab("Predicted indicator value") + scale_x_continuous(breaks = c(2020, 2040, 2060)) +
-  gfplot::theme_pbs() + no_panel_gap + legend_bottom
-ggsave("report/GoM_cod/indicator_ts.png", height = 7, width = 7)
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("report/GoM_cod/indicator_ts_log.png", height = 7, width = 7)
 
 
 ##### TS of indicators relative to FMSY75
