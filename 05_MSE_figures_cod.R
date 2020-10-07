@@ -198,6 +198,7 @@ ggplot(ypm, aes(PNOF, MeanC, label = label, colour = factor(col), shape = factor
   geom_point(size = 2) + ggrepel::geom_text_repel(size = 2.5) + 
   scale_shape_manual(values = c(8, 1, 16)) + coord_cartesian(ylim = c(0, 1.1e3)) + xlab("PNOF (%)") + ylab("Observed short-term catch") +
   scale_y_continuous(breaks = seq(0, 1000, 250)) +
+  scale_colour_manual(values = c("black", "blue", "red")) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom + no_legend
 ggsave("report/GoM_cod/pm_tradeoff.png", width = 3, height = 5)
 
