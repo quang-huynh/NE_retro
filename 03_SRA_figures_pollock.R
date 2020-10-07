@@ -36,7 +36,6 @@ abline(h = 0, col = "grey")
 mtext("Year", outer = TRUE, side = 1, line = 1)
 dev.off()
 
-
 ################# OM rho
 setup(3)
 rr_OM <- sfLapply(list(res3, res4, res5), retrospective, nyr = 7, figure = FALSE)
@@ -79,6 +78,31 @@ dev.off()
 
 
 
+no_panel_gap <- theme(panel.spacing = unit(0, "in"))
+legend_bottom <- theme(legend.position = "bottom")
+
+
+# SSB and R
+Model <- data.frame(name = c("SS", "SWB", "SWF", "Base", "FlatSel"), type = c("OM", "OM", "OM", "AM", "AM"))
+SSB <- lapply(list(res3, res4, res5, res1, res2), function(x) x@SSB[1, ]) %>% do.call(cbind, .) %>% 
+  structure(dimnames = list(Year = 1970:2019, name = Model$name)) %>% reshape2::melt() %>% mutate(y = "SSB") %>%
+  left_join(Model, by = "name")
+
+RR <- lapply(list(res3, res4, res5, res1, res2), function(x) x@Misc[[1]]$R) %>% do.call(cbind, .) %>% 
+  structure(dimnames = list(Year = 1970:2019, name = Model$name)) %>% reshape2::melt() %>% mutate(y = "Recruitment") %>%
+  left_join(Model, by = "name")
+
+ggplot(rbind(SSB, RR) %>% mutate(y = factor(y, levels = c("SSB", "Recruitment")), 
+                                 type = factor(type, levels = c("OM", "AM")),
+                                 name = factor(name, levels = Model$name)) %>% filter(value <= 1e6), 
+       aes(x = Year, y = value, linetype = type, colour = name)) + geom_line() +
+  geom_hline(yintercept = 0, colour = "white") +
+  facet_grid(y~., scales = "free_y", switch = "y") + ylab(NULL) +
+  scale_y_continuous(labels = scales::comma, n.breaks = 5) + guides(linetype = FALSE) +
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom + 
+  theme(legend.title = element_blank(), strip.placement = "outside")
+ggsave("report/pollock/model_compare.png", height = 4, width = 4)
+
 # Model peels
 setup(3)
 rr_OM <- sfLapply(list(res3, res4, res5), retrospective, nyr = 7, figure = FALSE)
@@ -92,8 +116,6 @@ rr_out <- do.call(rbind, rr_out) %>% mutate(Model = factor(Model, levels = model
 rho_label <- data.frame(Model = model_name %>% factor(),
                         rho = sapply(c(rr_OM, rr_EM), function(x) summary(x)[3, 1] %>% round(2) %>% paste0("rho==", .)))
 
-no_panel_gap <- theme(panel.spacing = unit(0, "in"))
-legend_bottom <- theme(legend.position = "bottom")
 
 ggplot(rr_out %>% filter(Peel > 0) %>% mutate(Peel = factor(Peel)), aes(Year, SSB)) + 
   geom_line(aes(group = Peel, colour = Peel)) + facet_wrap(~ Model) + 
@@ -112,6 +134,7 @@ ggplot(rr_out %>% filter(Peel > 0) %>% mutate(Peel = factor(Peel)), aes(Year, SS
   coord_cartesian(ylim = c(0, 6e5), xlim = c(1998, 2020)) + #scale_x_continuous(breaks = c(1970, 1990, 2010)) + 
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/pollock/pollock_cond_rho2.png", width = 6.5, height = 5)
+
 
 
 
