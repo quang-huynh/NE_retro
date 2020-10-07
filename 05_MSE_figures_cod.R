@@ -294,30 +294,44 @@ ggsave("report/GoM_cod/indicators_LDA.png", width = 7, height = 7)
 
 #### All MPs for rho vs. Prop mature for 3 years
 Yind <- c(2024, 2030, 2036)
-rr_pred <- list()
-for(i in 1:length(MPs[1:5])) {
-  rr <- MASS::lda(OM ~ PMat_1_mu * Year + SSB_rho * Year, 
-                  data = filter(indicators_cast, Year > 2018 & MP == MPs[i]) %>% mutate(Year = factor(Year)),
-                  method = "mle")
+rr_pred <- rr <- rr_CV <- list()
+data_list <- lapply(1:6, function(i) filter(indicators_cast, Year > 2018 & MP == MPs[i]) %>% mutate(Year = factor(Year)))
+
+for(i in 1:length(MPs)) {
+  rr[[i]] <- MASS::lda(OM ~ PMat_1_mu * Year + SSB_rho * Year, data = data_list[[i]], method = "mle")
+  
+  rr_CV[[i]] <- MASS::lda(OM ~ PMat_1_mu * Year + SSB_rho * Year, data = data_list[[i]], method = "mle", CV = TRUE)
+  
   rr_grid <- expand.grid(Year = table(indicators_cast$Year)[-1] %>% names(),
                          PMat_1_mu = seq(-0.5, -0.1, 0.01), SSB_rho = seq(-1, 3, 0.25)) 
   
-  rr_pred[[i]] <- predict(rr, newdata = rr_grid) %>% getElement("posterior") %>% as.data.frame() %>% cbind(rr_grid) %>%
+  rr_pred[[i]] <- predict(rr[[i]], newdata = rr_grid) %>% getElement("posterior") %>% as.data.frame() %>% cbind(rr_grid) %>%
     mutate(MP = MPs[i])
 }
-rr_pred2 <- do.call(rbind, rr_pred) %>% mutate(MP = factor(MP, levels = MPs[-6])) %>% 
+rr_pred2 <- do.call(rbind, rr_pred) %>% mutate(MP = factor(MP, levels = MPs)) %>% 
   filter(match(Year, Yind, nomatch = 0) %>% as.logical()) #%>% 
-  filter(!(MP == "MA" & Year == 2024) & !(MP == "M02"& Year == 2030))
+  #filter(!(MP == "MA" & Year == 2024) & !(MP == "M02"& Year == 2030))
+  
+# SVD
+lapply(rr, getElement, 'svd')
+lapply(rr, function(x) x$svd^2/sum(x$svd^2))
 
-ggplot(indicators_cast %>% filter(MP != "75%FMSY" & match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
+misclass <- Map(function(x, y, MP) {
+  yy <- data.frame(misclass = abs(as.numeric(x$class) - as.numeric(y$OM)) %>% as.logical(), Year = y$Year)
+  summarise(group_by(yy, Year), class_correct = round(1 - sum(misclass)/length(misclass), 2) %>% format()) %>% mutate(MP = MP)
+}, x = rr_CV, y = data_list, MP = MPs) %>% do.call(rbind, .) %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
+  mutate(MP = factor(MP, MPs))
+
+ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
   mutate(MP = factor(MP, levels = MPs)), aes(PMat_1_mu, SSB_rho)) + 
   facet_grid(Year ~ MP) + geom_hline(yintercept = 0, linetype = 3) + geom_point(aes(colour = OM), alpha = 0.6) +
   geom_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) + 
   #metR::geom_label_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) +
+  geom_text(data = misclass, aes(label = class_correct), x = 0, y = 3, vjust = "inward", hjust = "inward") +
   coord_cartesian(xlim = c(-0.5, -0), ylim = c(-0.5, 3)) + labs(x = "Prop. mature (log)", y = expression(rho[SSB])) +
   scale_x_continuous(breaks = c(-0.4, -0.2, 0)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
-ggsave("report/GoM_cod/indicators_LDA2.png", width = 6, height = 4)
+ggsave("report/GoM_cod/indicators_LDA2.png", width = 6.5, height = 4)
 
 
 # Time series plots
