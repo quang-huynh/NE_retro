@@ -306,14 +306,14 @@ for(i in 1:length(MPs[1:5])) {
     mutate(MP = MPs[i])
 }
 rr_pred2 <- do.call(rbind, rr_pred) %>% mutate(MP = factor(MP, levels = MPs[-6])) %>% 
-  filter(match(Year, Yind, nomatch = 0) %>% as.logical()) %>% 
+  filter(match(Year, Yind, nomatch = 0) %>% as.logical()) #%>% 
   filter(!(MP == "MA" & Year == 2024) & !(MP == "M02"& Year == 2030))
 
 ggplot(indicators_cast %>% filter(MP != "75%FMSY" & match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
   mutate(MP = factor(MP, levels = MPs)), aes(PMat_1_mu, SSB_rho)) + 
   facet_grid(Year ~ MP) + geom_hline(yintercept = 0, linetype = 3) + geom_point(aes(colour = OM), alpha = 0.6) +
   geom_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) + 
-  metR::geom_label_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) +
+  #metR::geom_label_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) +
   coord_cartesian(xlim = c(-0.5, -0), ylim = c(-0.5, 3)) + labs(x = "Prop. mature (log)", y = expression(rho[SSB])) +
   scale_x_continuous(breaks = c(-0.4, -0.2, 0)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom

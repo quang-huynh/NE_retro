@@ -244,7 +244,7 @@ ggplot(indicators_cast %>% filter(MP != "75%FMSY" & match(Year, Yind, nomatch = 
          mutate(MP = factor(MP, levels = MPs)), aes(PMat_1_mu, SSB_rho)) + 
   facet_grid(Year ~ MP) + geom_hline(yintercept = 0, linetype = 3) + geom_point(aes(colour = OM), alpha = 0.6) +
   geom_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = SWF)) + 
-  metR::geom_label_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = SWF)) +
+  #metR::geom_label_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = SWF)) +
   coord_cartesian(xlim = c(-0.3, -0.05), ylim = c(-0.25, 1)) + labs(x = "Prop. mature (log)", y = expression(rho[SSB])) +
   scale_x_continuous(breaks = c(-0.3, -0.2, -0.1)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
