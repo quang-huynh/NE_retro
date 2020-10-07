@@ -100,9 +100,18 @@ ggplot(rr_out %>% filter(Peel > 0) %>% mutate(Peel = factor(Peel)), aes(Year, SS
   geom_text(data = rho_label, x = 1970, y = 0, vjust = "inward", hjust = "inward", aes(label = rho), parse = TRUE) +
   geom_line(data = filter(rr_out, Peel == 0), size = 0.75, colour = "black") + 
   coord_cartesian(ylim = c(0, 6e5)) + scale_x_continuous(breaks = c(1970, 1990, 2010)) + 
-  gfplot::theme_pbs() + no_panel_gap + legend_bottom + theme()
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/pollock/pollock_cond_rho.png", width = 6.5, height = 5)
 
+
+
+ggplot(rr_out %>% filter(Peel > 0) %>% mutate(Peel = factor(Peel)), aes(Year, SSB)) + 
+  geom_line(aes(group = Peel, colour = Peel)) + facet_wrap(~ Model) + 
+  geom_text(data = rho_label, x = 1998, y = 0, vjust = "inward", hjust = "inward", aes(label = rho), parse = TRUE) +
+  geom_line(data = filter(rr_out, Peel == 0), size = 0.75, colour = "black") + 
+  coord_cartesian(ylim = c(0, 6e5), xlim = c(1998, 2020)) + #scale_x_continuous(breaks = c(1970, 1990, 2010)) + 
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+ggsave("report/pollock/pollock_cond_rho2.png", width = 6.5, height = 5)
 
 
 
