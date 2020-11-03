@@ -4,6 +4,9 @@ library(mfSCA)
 library(dplyr)
 library(ggplot2)
 
+######## OM order
+OM_order <- c(1, 3, 2)
+OM_names <- c("MC", "MCIM", "IM")
 
 ######## Reference points
 ref_pt <- readRDS(file = "GoM_cod/cod_ref_pt.rds")
@@ -31,14 +34,15 @@ MSE <- lapply(1:3, function(x) {
 ######## FM df
 FM <- lapply(1:3, function(x) MSE[[x]]@FM[, 1, ] %>% 
                structure(dimnames = list(Sim = 1:MSE[[x]]@nsim, Year = MSE[[x]]@OM$CurrentYr[1] + 1:MSE[[x]]@proyears)) %>%
-               reshape2::melt(value.name = "FM") %>% mutate(F_FMSY = FM/MSE[[x]]@OM$FMSY[1], OM = paste0("NR", x))) %>% do.call(rbind, .)
+               reshape2::melt(value.name = "FM") %>% mutate(F_FMSY = FM/MSE[[x]]@OM$FMSY[1], OM = OM_names[x])) %>% do.call(rbind, .)
 
 ######## Generate indicators
 s_CAA_hist <- get_cod_M02()$data$s_CAA
 indicators_raw <- lapply(1:length(MSE), get_indicators, ind_interval = 6, MSE = MSE, 
                          MPs = c("tuning_MP"), Cbias = c(2.25, 1.25, 1), s_CAA_hist = s_CAA_hist,
-                         mah_ind = c("MAge_1_slp", "MAge_1_mu", "Cat_slp", "Cat_mu", "Ind_1_slp", "MAge_1_slp"),
-                         Year_vec = seq(MSE[[1]]@nyears, MSE[[1]]@nyears + MSE[[1]]@proyears, 3))
+                         Year_vec = seq(MSE[[1]]@nyears, MSE[[1]]@nyears + MSE[[1]]@proyears, 3),
+                         OM_names = OM_names[OM_order],
+                         mat_age = c(0.09, 0.32, 0.70, 0.92, 0.98, 1.00, 1.00, 1.00, 1.00))
 indicators <- lapply(indicators_raw, getElement, 1) %>% do.call(rbind, .) %>% mutate(MP = NULL) %>% left_join(FM) %>% 
   filter(!is.na(value) & Year > 2020 & (grepl("Cat", Ind) | grepl("1", Ind)))
 indicators_cast <- reshape2::dcast(indicators, Sim + OM + Year + FM + F_FMSY ~ Ind, value.var = "value") %>% mutate(Year = factor(Year))
@@ -57,25 +61,30 @@ ggplot(indicators, aes(value, F_FMSY)) + geom_point(aes(colour = OM, shape = OM)
   coord_cartesian(ylim = c(0, 2)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 
-ggplot(indicators %>% filter(grepl("Ind_1", Ind)), aes(value, F_FMSY)) + geom_point(aes(colour = OM, shape = OM)) + facet_grid(Year ~ Ind, scales = "free") +
+ggplot(indicators %>% filter(Ind == "Ind_1_mu"), 
+       aes(value, F_FMSY)) + geom_point(aes(colour = OM, shape = OM)) + facet_wrap(~ Year, scales = "free") +
   geom_hline(yintercept = 1, linetype = 2) + 
-  geom_smooth(data = indicators %>% mutate(OM = NULL), aes(y = ifelse(F_FMSY > 1, 1, 0)), colour = "black",
+  geom_smooth(data = indicators %>% filter(Ind == "Ind_1_mu") %>% mutate(OM = NULL), aes(y = ifelse(F_FMSY > 1, 1, 0)), colour = "black",
               method = "glm", method.args = list(family = "binomial")) + 
-  coord_cartesian(ylim = c(0, 2)) +
+  coord_cartesian(ylim = c(0, 2)) + xlab("Mean Index") +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
+
+# Generate binomial model based on Ind_1_mu
+rr <- glm(ifelse(F_FMSY > 1, 1, 0) ~ Ind_1_mu * Year, data = indicators_cast, family = "binomial")
+saveRDS(rr, file = "GoM_cod/tuneMP_model.rds")
 
 
 
 ######### Plot mah
-mah <- lapply(indicators_raw, getElement, 2) %>% do.call(rbind, .) %>% left_join(FM)
-
-ggplot(mah, aes(value, F_FMSY)) + facet_wrap(~ Year) + geom_point(aes(colour = OM, shape = OM)) +
-  coord_cartesian(ylim = c(0, 2)) +
-  gfplot::theme_pbs() + no_panel_gap + legend_bottom
-
-ggplot(mah, aes(value)) + facet_wrap(~ Year, scales = "free") + geom_density(aes(fill = OM, colour = OM)) +
-  scale_colour_grey() + scale_fill_grey() + 
-  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+#mah <- lapply(indicators_raw, getElement, 2) %>% do.call(rbind, .) %>% left_join(FM)
+#
+#ggplot(mah, aes(value, F_FMSY)) + facet_wrap(~ Year) + geom_point(aes(colour = OM, shape = OM)) +
+#  coord_cartesian(ylim = c(0, 2)) +
+#  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+#
+#ggplot(mah, aes(value)) + facet_wrap(~ Year, scales = "free") + geom_density(aes(fill = OM, colour = OM)) +
+#  scale_colour_grey() + scale_fill_grey() + 
+#  gfplot::theme_pbs() + no_panel_gap + legend_bottom
 
 
 

@@ -20,7 +20,7 @@ get_indicators <- function(i, MSE_list, MPs = NULL, time_stanza = NULL, ind_type
   return(list(ind = ind, mah = mah))
 }
 
-get_indicators_fn <- function(ii, MSE, ind_interval = 5, time_stanza = NULL, ind_type = NULL, Cbias = 1, s_CAA_hist, mah_ind, Year_vec = NULL, mat_age = mat_age) {
+get_indicators_fn <- function(ii, MSE, ind_interval = 5, time_stanza = NULL, ind_type = NULL, Cbias = 1, s_CAA_hist, mah_ind, Year_vec = NULL, mat_age) {
   Data <- MSE@Misc$Data[[ii]]
   if(is.null(Year_vec)) {
     Year_vec <- vapply(Data@Misc[[1]]$diagnostic, getElement, numeric(1), "Year")
