@@ -9,3 +9,7 @@ med_rec <- vapply(SRA, function(i) quantile(i@mean_fit$report$R, 0.5), numeric(1
 ref_pt <- lapply(1:3, function(i) calc_refpt(SRA[[i]], med_rec = med_rec[i]))
 saveRDS(ref_pt, file = "pollock/pollock_ref_pt.rds")
 
+
+##### Compensation ratio - original
+lapply(1:3, function(i) SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[1:3]))
+lapply(1:3, function(i) SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[49]))
