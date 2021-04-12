@@ -83,3 +83,16 @@ ggplot(halibut %>% filter(facet == 2) %>% mutate(Model = factor(Model, 2007:2012
   ylab("Biomass estimate") + #coord_cartesian(xlim = c(1970, 1996)) +
   gfplot::theme_pbs() + no_legend + theme(strip.text.x = element_blank(), strip.text.y = element_blank())
 ggsave("report/ppt/retro2.png", width = 4, height = 3.25)
+
+
+###### Single-panel indicator
+ggplot(indicators_cast %>% filter(MP == "M02_ra" & Year == 2030), aes(PMat_1_mu, SSB_rho)) + 
+  facet_grid(Year ~ MP) + geom_hline(yintercept = 0, linetype = 3) + geom_point(aes(colour = OM), alpha = 0.6) +
+  geom_contour(data = rr_pred2 %>% filter(MP == "M02_ra" & Year == 2030), breaks = 0.5, colour = "black", aes(z = MC)) + 
+  #metR::geom_label_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) +
+  geom_text(data = misclass %>% filter(MP == "M02_ra" & Year == 2030), aes(label = class_correct), x = 0, y = 3, vjust = "inward", hjust = "inward") +
+  coord_cartesian(xlim = c(-0.5, -0), ylim = c(-0.5, 3)) + labs(x = "Prop. mature (log)", y = expression(rho[SSB])) +
+  scale_x_continuous(breaks = c(-0.4, -0.2, 0)) +
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+ggsave("report/ppt/LDA_singlepanel.png", height = 3, width = 3)
+

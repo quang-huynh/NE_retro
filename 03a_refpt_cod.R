@@ -25,6 +25,10 @@ abline(h = 0, v = c(0, 0.2 * SRA[[i]]@mean_fit$report$E0_SR), col = 'grey')
 plot(SS, c(SRA[[i]]@mean_fit$report$log_rec_dev[-1], 0), typ = 'o')
 abline(h = 0, lty = 2)
 
-SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[1:3])
 
-SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[37])
+
+
+##### Compensation ratio - original
+lapply(1:3, function(i) SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[1:3]))
+
+lapply(1:3, function(i) SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[37]))
