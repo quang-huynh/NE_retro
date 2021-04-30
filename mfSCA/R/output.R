@@ -142,35 +142,63 @@ plot_EM <- function(MSE, MPs = c("cod_M02", "cod_M02_ra", "cod_MRAMP", "cod_MRAM
 }
 
 #' @export
-plot_OM <- function(MSE, MPs, qlow = 0.25, qhigh = 0.75, yfilter = NULL, OM_names = NULL) {
+plot_OM <- function(MSE, MPs, qlow = 0.25, qhigh = 0.75, yfilter = NULL, OM_names = NULL,
+                    aggregate_across_years = FALSE, rel = FALSE) {
   
   names_list <- c("F", "SSB", "Catch")
   
   Map_fn <- function(mse, i, ref, MPs, OM_names) {
     MP_ind <- match(MPs, mse@MPs)
     
-    SSB_hist <- apply(mse@SSB_hist, c(1, 3), sum) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
-      aperm(c(1, 3, 2))
-    FM_hist <- apply(mse@FM_hist, c(1, 3), max) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
-      aperm(c(1, 3, 2))
-    CB_hist <- apply(mse@CB_hist, c(1, 3), sum) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
-      aperm(c(1, 3, 2))
-    
-    MSE_out <- list(abind::abind(FM_hist, mse@FM[, MP_ind, , drop = FALSE], along = 3), 
-                    abind::abind(SSB_hist, mse@SSB[, MP_ind, , drop = FALSE], along = 3),
-                    abind::abind(CB_hist, mse@C[, MP_ind, , drop = FALSE], along = 3))
+    if(rel) {
+      SSB_hist <- apply(mse@SSB_hist, c(1, 3), sum) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
+        aperm(c(1, 3, 2))
+      FM_hist <- apply(mse@FM_hist, c(1, 3), max) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
+        aperm(c(1, 3, 2))
+      CB_hist <- apply(mse@CB_hist, c(1, 3), sum) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
+        aperm(c(1, 3, 2))
+      
+      MSE_out <- list(abind::abind(FM_hist, mse@FM[, MP_ind, , drop = FALSE], along = 3), 
+                      abind::abind(SSB_hist/mse@OM$SSBMSY, 
+                                   mse@SSB[, MP_ind, , drop = FALSE]/mse@OM$SSBMSY, along = 3),
+                      abind::abind(CB_hist, mse@C[, MP_ind, , drop = FALSE], along = 3))
+    } else {
+      SSB_hist <- apply(mse@SSB_hist, c(1, 3), sum) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
+        aperm(c(1, 3, 2))
+      FM_hist <- apply(mse@FM_hist, c(1, 3), max) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
+        aperm(c(1, 3, 2))
+      CB_hist <- apply(mse@CB_hist, c(1, 3), sum) %>% array(dim = c(mse@nsim, mse@nyears, length(MP_ind))) %>%
+        aperm(c(1, 3, 2))
+      
+      MSE_out <- list(abind::abind(FM_hist, mse@FM[, MP_ind, , drop = FALSE], along = 3), 
+                      abind::abind(SSB_hist, mse@SSB[, MP_ind, , drop = FALSE], along = 3),
+                      abind::abind(CB_hist, mse@C[, MP_ind, , drop = FALSE], along = 3))
+    }
     
     quants <- lapply(MSE_out,
                      function(x, mse) {
-                       df_out <- 
-                         structure(x, dimnames = list(c(1:mse@nsim), mse@MPs[MP_ind], 
-                                                      c(1:(mse@nyears + mse@proyears)))) %>%
-                         reshape2::melt(varnames = c("quant", "MP", "Year")) %>%
-                         group_by(MP, Year) %>% 
-                         summarise(med = median(value), low = quantile(value, qlow), 
-                                   high = quantile(value, qhigh)) %>% 
-                         mutate(OM = OM_names[i], Year = Year + mse@OM$CurrentYr[1] - mse@nyears)
-                       if(!is.null(yfilter)) df_out <- filter(df_out, Year >= mse@OM$CurrentYr[1] - yfilter)
+                       if(aggregate_across_years) {
+                         df_out <- 
+                           structure(x, dimnames = list(c(1:mse@nsim), mse@MPs[MP_ind], 
+                                                        c(1:(mse@nyears + mse@proyears)))) %>%
+                           reshape2::melt(varnames = c("quant", "MP", "Year")) %>%
+                           filter(Year >= mse@proyears + mse@nyears - yfilter) %>%
+                           group_by(MP) %>% 
+                           summarise(med = median(value), low = quantile(value, qlow), 
+                                     high = quantile(value, qhigh)) %>%
+                           mutate(OM = OM_names[i])
+                       } else {
+                         df_out <- 
+                           structure(x, dimnames = list(c(1:mse@nsim), mse@MPs[MP_ind], 
+                                                        c(1:(mse@nyears + mse@proyears)))) %>%
+                           reshape2::melt(varnames = c("quant", "MP", "Year")) %>%
+                           group_by(MP, Year) %>% 
+                           summarise(med = median(value), low = quantile(value, qlow), 
+                                     high = quantile(value, qhigh)) %>% 
+                           mutate(OM = OM_names[i], Year = Year + mse@OM$CurrentYr[1] - mse@nyears)
+                         if(!is.null(yfilter)) df_out <- filter(df_out, Year >= mse@OM$CurrentYr[1] - yfilter)
+                       }
+                       
                        return(df_out)
                      }, mse = mse) %>%
       structure(names = names_list)

@@ -51,10 +51,21 @@ ggplot(resOM[[1]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(fac
   gfplot::theme_pbs() + no_panel_gap
 ggsave("report/GoM_cod/MSE_OM_F.png", height = 3.5, width = 8.5)
 
+# Calculate median and 80$ confidence interval during the last decade of the projection
+resOM_label <- plot_OM(MSE[OM_order], MPs = MPs, 0.10, 0.90, yfilter = 10, OM_names = OM_names[OM_order],
+                       aggregate_across_years = TRUE, rel = TRUE)
+SSB_label <- resOM_label[[2]] %>% 
+  mutate(label = round(med, 2) %>% format()) %>%
+  #mutate(label = paste0(round(med, 2), " (", round(low, 2), "-", round(high, 2), ")")) %>% 
+  left_join(summarise(group_by(resOM[[2]], OM), y_max = max(med, low, high)))
+
 ggplot(resOM[[2]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(factor(OM) ~ MP, scales = "free_y") +  
   #geom_hline(yintercept = 0, col = "grey") + 
   geom_vline(xintercept = MSE[[1]]@OM$CurrentYr[1], linetype = 3) +
   geom_ribbon(fill = "grey80") + geom_line(size = 0.9) + 
+  geom_text(data = SSB_label, inherit.aes = FALSE, x = 2018 + 50,
+            aes(y = y_max, label = label),
+            hjust = "inward", vjust = "inward") +
   geom_hline(data = ref_pt_plot[4:6, ], aes(yintercept = SSBMSY), linetype = 2) +
   geom_hline(data = ref_pt_plot[4:6, ], aes(yintercept = 0.5 * SSBMSY), linetype = 2) +
   ylab("SSB") + scale_y_continuous(labels = scales::comma, expand = c(0.01, 0.01)) +
@@ -104,7 +115,7 @@ ggplot(out[[3]] %>% filter(Year > 2020), aes(x = as.numeric(Year), y = `50%`, ym
   xlab("Year") + ylab(expression(rho[SSB])) + theme(legend.position = "bottom") +
   scale_x_continuous(breaks = c(2020, 2040, 2060)) + scale_shape_manual(values = c(16, 1)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(shape = "AM")
 ggsave("report/GoM_cod/MSE_EM_rho.png", height = 4, width = 6.5)
 
 
@@ -332,7 +343,6 @@ ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical(
   scale_x_continuous(breaks = c(-0.4, -0.2, 0)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/GoM_cod/indicators_LDA2.png", width = 6.5, height = 4)
-
 
 # Time series plots
 indicators_ts <- indicators %>% mutate(value = ifelse(grepl("mu", Ind), exp(value), value)) %>%
