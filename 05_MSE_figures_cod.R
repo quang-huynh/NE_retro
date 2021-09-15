@@ -237,7 +237,7 @@ ggsave("report/GoM_cod/pm_tradeoff.png", width = 3, height = 5)
 
 ########  Indicators
 s_CAA_hist <- get_cod_M02()$data$s_CAA
-indicators_raw <- lapply(1:length(MSE), get_indicators, ind_interval = 6, MSE = MSE[OM_order], 
+indicators_raw <- lapply(1:length(MSE), get_indicators, ind_interval = 3, MSE = MSE[OM_order], 
                          MPs = MPs, Cbias = c(2.25, 1.25, 1), s_CAA_hist = s_CAA_hist,
                          OM_names = OM_names[OM_order],
                          mat_age = c(0.09, 0.32, 0.70, 0.92, 0.98, 1.00, 1.00, 1.00, 1.00))
@@ -248,6 +248,7 @@ indicators_cast <- indicators %>% reshape2::dcast(Year + MP + OM + Sim ~ Ind, va
 rr <- lda(OM ~ Ind_1_mu * Year + SSB_rho * Year + PMat_1_mu * Year + MAge_1_mu * Year, 
           data = filter(indicators_cast, Year > 2018 & MP == "M02_ra") %>% mutate(Year = factor(Year)))
 
+#### Show indicator over time for a single MP
 # Index vs. rho
 rr <- lda(OM ~ Ind_1_mu * Year + SSB_rho * Year, 
           data = filter(indicators_cast, Year > 2018 & MP == "M02_ra") %>% mutate(Year = factor(Year)))
@@ -261,7 +262,7 @@ ggplot(indicators_cast %>% filter(MP == "M02_ra" & Year > 2018), aes(Ind_1_mu, S
   coord_cartesian(xlim = c(-2, 10), ylim = c(-1, 3))
 
 
-# Mean age
+# Mean age vs. rho
 rr <- lda(OM ~ MAge_1_mu * Year + SSB_rho * Year,
           data = filter(indicators_cast, Year > 2018 & MP == "M02") %>% mutate(Year = factor(Year)))
 rr_grid <- expand.grid(Year = table(indicators_cast$Year)[-1] %>% names(),
@@ -274,7 +275,7 @@ ggplot(indicators_cast %>% filter(MP == "M02" & Year > 2018), aes(MAge_1_mu, SSB
   coord_cartesian(ylim = c(-1, 3))
 
 
-# Prop. mature age
+# Pmat vs. rho
 rr <- lda(OM ~ PMat_1_mu * Year + SSB_rho * Year, 
           data = filter(indicators_cast, Year > 2018 & MP == "M02") %>% mutate(Year = factor(Year)))
 rr_grid <- expand.grid(Year = table(indicators_cast$Year)[-1] %>% names(),
@@ -292,7 +293,7 @@ ggplot(indicators_cast %>% filter(MP == "M02" & Year > 2018), aes(PMat_1_mu, SSB
 ggsave("report/GoM_cod/indicators_LDA.png", width = 7, height = 7)
 
 
-#### All MPs for rho vs. Prop mature for 3 years
+#### All MPs for rho vs. Prop mature
 Yind <- c(2024, 2030, 2036)
 rr_pred <- rr <- rr_CV <- list()
 data_list <- lapply(1:6, function(i) filter(indicators_cast, Year > 2018 & MP == MPs[i]) %>% mutate(Year = factor(Year)))
@@ -328,10 +329,10 @@ ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical(
   geom_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) + 
   #metR::geom_label_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) +
   geom_text(data = misclass, aes(label = class_correct), x = 0, y = 3, vjust = "inward", hjust = "inward") +
-  coord_cartesian(xlim = c(-0.5, -0), ylim = c(-0.5, 3)) + labs(x = "Prop. mature (log)", y = expression(rho[SSB])) +
+  coord_cartesian(xlim = c(-0.5, -0), ylim = c(-0.5, 3)) + labs(x = expression(P[mat]), y = expression(rho[SSB])) +
   scale_x_continuous(breaks = c(-0.4, -0.2, 0)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
-ggsave("report/GoM_cod/indicators_LDA2.png", width = 6.5, height = 4)
+ggsave("report/GoM_cod/indicators_LDA2_3y.png", width = 6.5, height = 4)
 
 
 # Time series plots

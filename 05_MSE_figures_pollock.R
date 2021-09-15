@@ -212,7 +212,7 @@ ggsave("report/pollock/pm_tradeoff.png", width = 3, height = 5)
 
 ######## Indicators - MPs
 s_CAA_hist <- get_pollock_base()$data$s_CAA
-indicators_raw <- lapply(1:length(MSE), get_indicators, ind_interval = 6, MSE = MSE, 
+indicators_raw <- lapply(1:length(MSE), get_indicators, ind_interval = 3, MSE = MSE, 
                          MPs = MPs, s_CAA_hist = s_CAA_hist,
                          OM_names = OM_names,
                          mat_age = c(0.88, 0.294, 0.643, 0.887, 0.971, 0.993, 0.998, 1, 1))
@@ -257,10 +257,10 @@ ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical(
   geom_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = SWF)) + 
   #metR::geom_label_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = SWF)) +
   geom_text(data = misclass, aes(label = class_correct), x = -0.05, y = 1, vjust = "inward", hjust = "inward") +
-  coord_cartesian(xlim = c(-0.3, -0.05), ylim = c(-0.25, 1)) + labs(x = "Prop. mature (log)", y = expression(rho[SSB])) +
+  coord_cartesian(xlim = c(-0.3, -0.05), ylim = c(-0.25, 1)) + labs(x = expression(P[mat]), y = expression(rho[SSB])) +
   scale_x_continuous(breaks = c(-0.3, -0.2, -0.1)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
-ggsave("report/pollock/indicators_LDA2.png", width = 6.5, height = 4)
+ggsave("report/pollock/indicators_LDA2_3y.png", width = 6.5, height = 4)
 
 
 # Time series plots
