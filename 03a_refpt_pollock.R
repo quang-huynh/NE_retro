@@ -13,3 +13,13 @@ saveRDS(ref_pt, file = "pollock/pollock_ref_pt.rds")
 ##### Compensation ratio - original
 lapply(1:3, function(i) SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[1:3]))
 lapply(1:3, function(i) SRA[[i]]@mean_fit$report$Arec * mean(SRA[[i]]@mean_fit$report$EPR0[49]))
+
+
+# Calculate F40% for assessment models
+SRA <- lapply(c("base", "flatsel"), function(i) readRDS(paste0("pollock/SRA_pollock_", i, ".rds")))
+med_rec <- vapply(SRA, function(i) quantile(i@mean_fit$report$R, 0.75), numeric(1))
+
+AM_ref <- lapply(1:2, function(i) calc_refpt(SRA[[i]], med_rec = med_rec[i]))
+
+lapply(AM_ref, function(x) x[1, ])
+
