@@ -92,13 +92,18 @@ RR <- lapply(list(res3, res4, res5, res1, res2), function(x) x@Misc[[1]]$R) %>% 
   structure(dimnames = list(Year = 1982:2019, name = Model$name)) %>% reshape2::melt() %>% mutate(y = "Recruitment") %>%
   left_join(Model, by = "name")
 
-ggplot(rbind(SSB, RR) %>% mutate(y = factor(y, levels = c("SSB", "Recruitment")), 
-                                 type = factor(type, levels = c("OM", "AM")),
-                                 name = factor(name, levels = Model$name)) %>% filter(value <= 1e6), 
-       aes(x = Year, y = value, linetype = type, colour = name)) + geom_line() +
+rbind(SSB, RR) %>% 
+  mutate(y = factor(y, levels = c("SSB", "Recruitment")), 
+         name = factor(name, levels = Model$name)) %>% 
+  filter(value <= 1e6) %>%
+  ggplot(aes(x = Year, y = value, linetype = name, colour = name)) + geom_line() +
   geom_hline(yintercept = 0, colour = "white") +
-  facet_grid(y~., scales = "free_y", switch = "y") + ylab(NULL) +
-  scale_y_continuous(labels = scales::comma, n.breaks = 5) + guides(linetype = FALSE) +
+  facet_grid(y ~ ., scales = "free_y", switch = "y") + ylab(NULL) + 
+  geom_text(data = data.frame(x = Inf, yy = Inf, y = c("SSB", "Recruitment"), txt = c("(a)", "(b)")),
+            aes(x, yy, label = txt), hjust = 1.1, vjust = 1.1,
+            inherit.aes = FALSE) + 
+  scale_y_continuous(labels = scales::comma, n.breaks = 5) +
+  scale_linetype_manual(values = c("MC" = 1, "IM" = 1, "MCIM" = 1, "M02" = 2, "MRAMP" = 2)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom + 
   theme(legend.title = element_blank(), strip.placement = "outside")
 ggsave("report/GoM_cod/model_compare.png", height = 4, width = 4)
@@ -119,9 +124,14 @@ rho_label <- data.frame(Model = model_name %>% factor(),
 
 ggplot(rr_out %>% filter(Peel > 0) %>% mutate(Peel = factor(Peel)), aes(Year, SSB)) + 
   geom_line(aes(group = Peel, colour = Peel)) + facet_wrap(~ Model) + 
-  geom_text(data = rho_label, x = 1982, y = 0, vjust = "inward", hjust = "inward", aes(label = rho), parse = TRUE) +
+  geom_text(data = rho_label, x = -Inf, y = 0, vjust = "inward", hjust = -0.1, aes(label = rho), parse = TRUE) +
   geom_line(data = filter(rr_out, Peel == 0), size = 0.5, colour = "black") + 
-  coord_cartesian(ylim = c(0, 6e4)) + #scale_x_continuous(breaks = c(1970, 1990, 2010)) + 
+  geom_text(data = data.frame(Model = model_name, label = paste0("(", letters[1:5], ")")),
+            aes(label = label),
+            inherit.aes = FALSE, x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1
+  ) + 
+  coord_cartesian(ylim = c(0, 6e4)) + 
+  scale_y_continuous(labels = scales::comma) + 
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/GoM_cod/cod_cond_rho.png", width = 6.5, height = 5)
 
@@ -129,9 +139,14 @@ ggsave("report/GoM_cod/cod_cond_rho.png", width = 6.5, height = 5)
 
 ggplot(rr_out %>% filter(Peel > 0) %>% mutate(Peel = factor(Peel)), aes(Year, SSB)) + 
   geom_line(aes(group = Peel, colour = Peel)) + facet_wrap(~ Model) + 
-  geom_text(data = rho_label, x = 1998, y = 0, vjust = "inward", hjust = "inward", aes(label = rho), parse = TRUE) +
+  geom_text(data = rho_label, x = -Inf, y = 0, vjust = "inward", hjust = -0.1, aes(label = rho), parse = TRUE) +
   geom_line(data = filter(rr_out, Peel == 0), size = 0.5, colour = "black") + 
-  coord_cartesian(ylim = c(0, 4e4), xlim = c(1998, 2020)) + #scale_x_continuous(breaks = c(1970, 1990, 2010)) + 
+  geom_text(data = data.frame(Model = model_name, label = paste0("(", letters[1:5], ")")),
+            aes(label = label),
+            inherit.aes = FALSE, x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1
+            ) + 
+  coord_cartesian(ylim = c(0, 4e4), xlim = c(1998, 2020)) + 
+  scale_y_continuous(labels = scales::comma) + 
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/GoM_cod/cod_cond_rho2.png", width = 6.5, height = 5)
 

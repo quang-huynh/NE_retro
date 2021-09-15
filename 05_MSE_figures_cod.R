@@ -23,7 +23,7 @@ ref_pt_plot$type <- rep(c("old", "new"), each = 3)
 MSE <- lapply(1:3, function(x) {
   y <- readRDS(paste0("GoM_cod/MSE_cod_NR", x, ".rds"))
   
-  y@MPs[1:5] <- c("M02", "M02_ra", "MRAMP", "MRAMP_ra", "MA")
+  y@MPs[1:5] <- MPs[-6]
   y@OM$SSBMSY <- filter(ref_pt_plot, type == 'new')$SSBMSY[x]
   y@B_BMSY <- y@SSB/y@OM$SSBMSY
   
@@ -42,10 +42,17 @@ no_legend <- theme(legend.position = "none")
 no_panel_gap <- theme(panel.spacing = unit(0, "in"))
 legend_bottom <- theme(legend.position = "bottom")
 
+OM_letters <- expand.grid(OM = OM_names[OM_order], MP = MPs)
+OM_letters$label <- paste0("(", letters[1:nrow(OM_letters)], ")")
+
 ggplot(resOM[[1]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(factor(OM) ~ MP, scales = "free_y") + 
-  #geom_hline(yintercept = 0, col = "grey") + 
+  geom_hline(yintercept = 0, col = "white") + 
   geom_vline(xintercept = MSE[[1]]@OM$CurrentYr[1], linetype = 3) +
   geom_ribbon(fill = "grey80") + geom_line(size = 0.9) + 
+  geom_label(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, colour = NA, hjust = -0.1, vjust = 1, 
+             aes(label = label)) +
+  geom_text(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, 
+            aes(label = label)) +
   geom_hline(data = ref_pt_plot[4:6, ], aes(yintercept = FMSY), linetype = 2, size = 0.5) +
   ylab("Fishing mortality") + scale_y_continuous(expand = c(0.01, 0.01)) + 
   gfplot::theme_pbs() + no_panel_gap
@@ -55,17 +62,18 @@ ggsave("report/GoM_cod/MSE_OM_F.png", height = 3.5, width = 8.5)
 resOM_label <- plot_OM(MSE[OM_order], MPs = MPs, 0.10, 0.90, yfilter = 10, OM_names = OM_names[OM_order],
                        aggregate_across_years = TRUE, rel = TRUE)
 SSB_label <- resOM_label[[2]] %>% 
-  mutate(label = round(med, 2) %>% format()) %>%
-  #mutate(label = paste0(round(med, 2), " (", round(low, 2), "-", round(high, 2), ")")) %>% 
-  left_join(summarise(group_by(resOM[[2]], OM), y_max = max(med, low, high)))
+  mutate(label = round(med, 2) %>% format())
 
 ggplot(resOM[[2]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(factor(OM) ~ MP, scales = "free_y") +  
-  #geom_hline(yintercept = 0, col = "grey") + 
+  geom_hline(yintercept = 0, col = "white") + 
   geom_vline(xintercept = MSE[[1]]@OM$CurrentYr[1], linetype = 3) +
   geom_ribbon(fill = "grey80") + geom_line(size = 0.9) + 
-  geom_text(data = SSB_label, inherit.aes = FALSE, x = 2018 + 50,
-            aes(y = y_max, label = label),
-            hjust = "inward", vjust = "inward") +
+  geom_text(data = SSB_label, inherit.aes = FALSE, x = Inf, y = Inf, hjust = 1.1, vjust = 1.1,
+            aes(label = label)) +
+  geom_label(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, colour = NA, hjust = -0.1, vjust = 1, 
+             aes(label = label)) +
+  geom_text(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, 
+            aes(label = label)) +
   geom_hline(data = ref_pt_plot[4:6, ], aes(yintercept = SSBMSY), linetype = 2) +
   geom_hline(data = ref_pt_plot[4:6, ], aes(yintercept = 0.5 * SSBMSY), linetype = 2) +
   ylab("SSB") + scale_y_continuous(labels = scales::comma, expand = c(0.01, 0.01)) +
@@ -73,9 +81,13 @@ ggplot(resOM[[2]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(fac
 ggsave("report/GoM_cod/MSE_OM_SSB.png", height = 3.5, width = 8.5)
 
 ggplot(resOM[[3]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(factor(OM) ~ MP, scales = "free_y") + 
-  #geom_hline(yintercept = 0, col = "grey") + 
+  geom_hline(yintercept = 0, col = "white") + 
   geom_vline(xintercept = MSE[[1]]@OM$CurrentYr[1], linetype = 3) +
   geom_ribbon(fill = "grey80") + geom_line(size = 0.9) + 
+  geom_label(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, colour = NA, hjust = -0.1, vjust = 1, 
+             aes(label = label)) +
+  geom_text(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, 
+            aes(label = label)) +
   geom_hline(data = ref_pt_plot[4:6, ], aes(yintercept = OY), linetype = 3) +
   ylab("Catch") + scale_y_continuous(labels = scales::comma, expand = c(0.01, 0.01)) +
   gfplot::theme_pbs() + no_panel_gap
@@ -113,9 +125,13 @@ ggplot(out[[3]] %>% filter(Year > 2020), aes(x = as.numeric(Year), y = `50%`, ym
   geom_hline(yintercept = 0, linetype = 3) + 
   geom_point(size = 1.25) + geom_linerange(size = 0.5) + 
   xlab("Year") + ylab(expression(rho[SSB])) + theme(legend.position = "bottom") +
+  #geom_label(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, colour = NA, hjust = -0.1, vjust = 1, 
+  #           aes(label = label)) +
+  geom_text(data = OM_letters, inherit.aes = FALSE, x = Inf, y = Inf, hjust = 1.1, vjust = 1.1, 
+            aes(label = label)) +
   scale_x_continuous(breaks = c(2020, 2040, 2060)) + scale_shape_manual(values = c(16, 1)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(shape = "AM")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + labs(shape = "")
 ggsave("report/GoM_cod/MSE_EM_rho.png", height = 4, width = 6.5)
 
 
@@ -207,6 +223,9 @@ ypm <- Map(Yield_fn, MSE = MSE[OM_order], OM_names = OM_names[OM_order], Cbias =
 
 ggplot(ypm, aes(PNOF, MeanC, label = label, colour = factor(col), shape = factor(col))) + facet_grid(OM~., scales = "free_y") + 
   geom_point(size = 2) + ggrepel::geom_text_repel(size = 2.5) + 
+  geom_text(data = data.frame(PNOF = Inf, MeanC = Inf, OM = OM_names[OM_order], txt = c("(a)", "(b)", "(c)")),
+            aes(PNOF, MeanC, label = txt), hjust = 1.1, vjust = 1.1,
+            inherit.aes = FALSE) +
   scale_shape_manual(values = c(8, 1, 16)) + coord_cartesian(ylim = c(0, 1.1e3)) + xlab("PNOF (%)") + ylab("Observed short-term catch") +
   scale_y_continuous(breaks = seq(0, 1000, 250)) +
   scale_colour_manual(values = c("black", "blue", "red")) +
@@ -334,13 +353,21 @@ misclass <- Map(function(x, y, MP) {
 }, x = rr_CV, y = data_list, MP = MPs) %>% do.call(rbind, .) %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
   mutate(MP = factor(MP, MPs))
 
+
+LDA_letters <- expand.grid(Year = Yind, MP = MPs)
+LDA_letters$label <- paste0("(", letters[1:nrow(LDA_letters)], ")")
+
 ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
   mutate(MP = factor(MP, levels = MPs)), aes(PMat_1_mu, SSB_rho)) + 
   facet_grid(Year ~ MP) + geom_hline(yintercept = 0, linetype = 3) + geom_point(aes(colour = OM), alpha = 0.6) +
   geom_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) + 
   #metR::geom_label_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) +
-  geom_text(data = misclass, aes(label = class_correct), x = 0, y = 3, vjust = "inward", hjust = "inward") +
-  coord_cartesian(xlim = c(-0.5, -0), ylim = c(-0.5, 3)) + labs(x = expression(P[mat]), y = expression(rho[SSB])) +
+  geom_text(data = misclass, aes(label = class_correct), x = Inf, y = Inf, vjust = 1.1, hjust = 1.1) +
+  #geom_label(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, colour = NA, hjust = -0.1, vjust = 1, 
+  #           aes(label = label)) +
+  geom_text(data = LDA_letters, inherit.aes = FALSE, x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, 
+            aes(label = label)) +
+  coord_cartesian(xlim = c(-0.5, -0), ylim = c(-0.5, 3.5)) + labs(x = expression(P[mat]), y = expression(rho[SSB])) +
   scale_x_continuous(breaks = c(-0.4, -0.2, 0)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/GoM_cod/indicators_LDA2_3y.png", width = 6.5, height = 4)
@@ -409,11 +436,16 @@ rec <- Map(plot_recruitment, MSE = MSE[OM_order], SRA = SRA[OM_order], OM_names 
 
 recpred <- lapply(rec, getElement, "Rpred") %>% do.call(rbind, .) %>% group_by(MP, OM, Year) %>% summarise(R = mean(R)) %>%
   mutate(OM = factor(OM, levels = OM_names[OM_order]))
+recpred$OM <- factor(recpred$OM, levels = OM_names[OM_order])
 rhist <- lapply(rec, getElement, "Rhist") %>% do.call(rbind, .) %>% mutate(OM = factor(OM, levels = OM_names[OM_order])) %>%
   filter(Year >= 2009)
 
 ggplot(recpred, aes(Year, R)) + geom_line(aes(colour = MP)) + geom_point(aes(colour = MP, shape = MP)) + 
   facet_grid(OM ~ .) + geom_line(data = rhist) +
+  geom_text(data = data.frame(OM = OM_names[OM_order], label = c("(a)", "(b)", "(c)")), aes(label = label),
+            x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1,
+            inherit.aes = FALSE) +
   geom_vline(xintercept = 2018, linetype = 2) + labs(y = "Recruitment") + 
+  scale_y_continuous(labels = scales::comma) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/GoM_cod/mean_recruitment.png", width = 3, height = 4.5)  

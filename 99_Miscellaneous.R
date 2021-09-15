@@ -20,10 +20,18 @@ a <- ggplot(halibut, aes(x = Year, y = VB, group = Model, colour = factor(Model)
   geom_hline(yintercept = 0, col = "white") + 
   geom_vline(data = data.frame(facet = c(1, 2), yy = c(1996, 1995)), aes(xintercept = yy), col = "white") +
   ylab("Biomass estimate") + 
+  geom_text(data = data.frame(x = Inf, y = Inf, facet = 1:2, txt = c("(a)", "(c)")), 
+            vjust = 1.1, hjust = 1.1,
+            inherit.aes = FALSE, aes(x = x, y = y, label = txt)) + 
   gfplot::theme_pbs() + no_legend + theme(strip.text.x = element_blank(), strip.text.y = element_blank())
 b <- ggplot(TAC, aes(x = Model, y = TAC2)) + facet_wrap(~facet, ncol = 1, scales = "free") +
   geom_line() + geom_point(aes(colour = factor(Model))) + 
-  geom_hline(yintercept = 0, col = "white") + labs(x = "Year", y = "Relative catch advice") + 
+  geom_hline(yintercept = 0, col = "white") + 
+  geom_text(data = data.frame(x = Inf, y = Inf, facet = 1:2, txt = c("(b)", "(d)")), 
+            vjust = 1.1, hjust = 1.1,
+            inherit.aes = FALSE, aes(x = x, y = y, label = txt)) + 
+  labs(x = "Year", y = "Relative catch advice") + 
+  coord_cartesian(ylim = c(0, 1.5)) + 
   gfplot::theme_pbs() + no_legend + theme(strip.text.x = element_blank(), strip.text.y = element_blank())
 
 cowplot::plot_grid(a, b, nrow = 1)
