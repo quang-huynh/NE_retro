@@ -176,7 +176,7 @@ ggsave("report/pollock/PM.png", height = 4, width = 6.5)
 
 # Trade - off
 pm2 <- reshape2::dcast(pm, MP + OM ~ PM)
-ggplot(pm2, aes(PB50, POY, label = MP)) + facet_wrap(~OM) + geom_point() + ggrepel::geom_text_repel()
+#ggplot(pm2, aes(PB50, POY, label = MP)) + facet_wrap(~OM) + geom_point() + ggrepel::geom_text_repel()
 
 Yield_fn <- function(MSE, Yrs = c(1, 10), MPs, OM_names = "OM", Cbias = 1) {
   geo_mean <- function(x) (sum(log(x))/length(x)) %>% exp()
@@ -184,30 +184,33 @@ Yield_fn <- function(MSE, Yrs = c(1, 10), MPs, OM_names = "OM", Cbias = 1) {
   data.frame(MP = MPs, OM = OM_names, MeanC = CC)
 }
 
-color_fn <- function(x) {
-  y <- rep(0, length(x))
-  y[grep("Base", x)] <- 1
-  y[grep("FlatSel", x)] <- 2
-  return(y)
+AM_fn <- function(x) {
+  y <- sapply(as.character(x), function(xx) strsplit(xx, "_")[[1]][1])
+  y[grep("MA", y)] <- "Both"
+  y[grep("75%FMSY", y)] <- "None"
+  factor(y, levels = c("Base", "FlatSel", "Both", "None"))
 }
 
 ypm <- Map(Yield_fn, MSE = MSE, OM_names = OM_names, MoreArgs = list(MPs = MPs)) %>% do.call(rbind, .) %>% 
   left_join(pm2, by = c("MP", "OM")) %>% 
-  mutate(OM = factor(OM, levels = OM_names), col = color_fn(MP), 
+  mutate(OM = factor(OM, levels = OM_names), AM = AM_fn(MP),
          label = ifelse(PB50 > 0.99, ">99", ifelse(PB50 < 0.01, "<1", round(100 * PB50, 0))) %>% paste0(MP, " (", ., "%)"),
          PNOF = 100 * PNOF)
 
-ggplot(ypm, aes(PNOF, MeanC, label = label, colour = factor(col), shape = factor(col))) + facet_grid(OM ~ ., scales = "free_y") + 
-  geom_point(size = 2) + ggrepel::geom_text_repel(size = 2.5) + 
+ggplot(ypm, aes(PNOF, MeanC, colour = AM)) + facet_grid(OM ~ ., scales = "free_y") + 
+  geom_point(aes(shape = AM), size = 2) + 
+  ggrepel::geom_text_repel(aes(label = label), size = 2.5) + 
   geom_text(data = data.frame(OM = c("SS", "SWB", "SWF"), txt = c("(a)", "(b)", "(c)")),
             aes(label = txt), x = Inf, y = Inf, hjust = 1.1, vjust = 1.1,
             inherit.aes = FALSE) +
-  scale_shape_manual(values = c(8, 1, 16)) + coord_cartesian(xlim = c(50, 100), ylim = c(10e3, 30e3)) + 
+  scale_shape_manual(values = c(8, 1, 16, 2)) + 
+  scale_colour_manual(values = c("blue", "red", "#13F240FF", "black")) +
+  guides(label = "none") +
+  coord_cartesian(xlim = c(50, 100), ylim = c(10e3, 30e3)) + 
   xlab("PNOF (%)") + ylab("Observed short-term catch") + 
-  scale_colour_manual(values = c("black", "blue", "red")) +
   scale_y_continuous(labels = scales::comma) +
-  gfplot::theme_pbs() + no_panel_gap + legend_bottom + no_legend
-ggsave("report/pollock/pm_tradeoff.png", width = 3, height = 5)
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+ggsave("report/pollock/pm_tradeoff.png", width = 3, height = 5.5)
 
 
 
