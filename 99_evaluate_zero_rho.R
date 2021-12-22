@@ -1,10 +1,10 @@
 
-## View why there are no retros in NR1
+## View why there are no retros in OM MC for cod
 library(MSEtool)
 library(mfSCA)
 
 ## Get MSE object
-MSE <- readRDS("GoM_cod/MSE_cod_NR1.rds")
+MSE <- readRDS("GoM_cod/MSE_cod_MC.rds")
 MSE@MPs
 
 # Perfect implementation = MP #8
@@ -35,7 +35,7 @@ SRA_M02 <- readRDS("GoM_cod/SRA_cod_M02.rds")
 SRA_MRAMP <- readRDS("GoM_cod/SRA_cod_MRAMP.rds")
 Cbias <- c(2.25, 1.25, 1)
 
-SRA_OM <- readRDS(paste0("GoM_cod/SRA_NR1.rds")) %>% 
+SRA_OM <- readRDS(paste0("GoM_cod/SRA_MC.rds")) %>% 
   generate_OM_args(AddInd_from_residuals = FALSE, AC_from_residuals = TRUE, Cobs = 0.05,
                    Cbias = 2.25)
 args_M02 <- get_cod_M02(nsim = SRA_OM@OM@nsim) %>% 
@@ -95,7 +95,7 @@ library(MSEtool)
 library(mfSCA)
 
 ## Get MSE object
-MSE <- readRDS("GoM_cod/MSE_cod_NR1.rds")
+MSE <- readRDS("GoM_cod/MSE_cod_MC.rds")
 MSE@MPs
 
 # MRAMP MP = 3
@@ -123,7 +123,7 @@ SRA_M02 <- readRDS("GoM_cod/SRA_cod_M02.rds")
 SRA_MRAMP <- readRDS("GoM_cod/SRA_cod_MRAMP.rds")
 Cbias <- c(2.25, 1.25, 1)
 
-SRA_OM <- readRDS(paste0("GoM_cod/SRA_NR1.rds")) %>% 
+SRA_OM <- readRDS(paste0("GoM_cod/SRA_MC.rds")) %>% 
   generate_OM_args(AddInd_from_residuals = FALSE, AC_from_residuals = TRUE, Cobs = 0.05,
                    Cbias = 2.25)
 args_MRAMP <- get_cod_MRAMP(nsim = SRA_OM@OM@nsim) %>% 
