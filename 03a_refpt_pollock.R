@@ -2,7 +2,7 @@ library(MSEtool)
 library(mfSCA)
 
 # Calc ref points (M = 0.2)
-SRA <- lapply(1:3, function(i) readRDS(paste0("pollock/SRA_NR", i, ".rds")))
+SRA <- lapply(c("SS", "SWB", "SWF"), function(i) readRDS(paste0("pollock/SRA_", i, ".rds")))
 med_rec <- vapply(SRA, function(i) quantile(i@mean_fit$report$R, 0.5), numeric(1))
 
 ######## Reference points
@@ -20,6 +20,4 @@ SRA <- lapply(c("base", "flatsel"), function(i) readRDS(paste0("pollock/SRA_poll
 med_rec <- vapply(SRA, function(i) quantile(i@mean_fit$report$R, 0.75), numeric(1))
 
 AM_ref <- lapply(1:2, function(i) calc_refpt(SRA[[i]], med_rec = med_rec[i]))
-
-lapply(AM_ref, function(x) x[1, ])
 

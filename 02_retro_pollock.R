@@ -111,8 +111,8 @@ check_conv <- function(x) vapply(x, function(xx) unique(xx[[1]]@conv), logical(1
 calc_rho <- function(x) vapply(x, function(xx) ifelse(unique(xx[[1]]@conv), summary(xx[[2]])[3, 1], NA), numeric(1))
 
 
-
-############### Profile index selectivity
+############### Generate pollock OM SS
+############### Profile index selectivity at maxage
 args <- get_pollock_base(h = 0.81)
 setup(6)
 sfExport(list = c("args", "eval_retro"))
@@ -133,11 +133,11 @@ plot(sel_profile[[1]][[1]], retro = sel_profile[[1]][[2]], file = "report/polloc
 # Generate the OM
 args <- get_pollock_base(100, h = 0.81)
 NR1 <- lapply(0.05, eval_retro, type = "survey_sel", args = args)
-saveRDS(NR1[[1]][[1]], file = "pollock/SRA_NR1.rds")
+saveRDS(NR1[[1]][[1]], file = "pollock/SRA_SS.rds")
 
 
 
-
+############## Generate pollock OM SWB
 ############## Profile by lambda Index
 args <- get_pollock_flatsel(h = 0.81)
 setup(6)
@@ -160,9 +160,13 @@ plot(Isd_profile[[8]][[1]], retro = Isd_profile[[8]][[2]], file = "report/polloc
 # Generate the OM
 args <- get_pollock_base(100, h = 0.81)
 NR2 <- lapply(8, eval_retro, type = "I_sd", args = args)
-saveRDS(NR2[[1]][[1]], file = "pollock/SRA_NR2.rds")
+saveRDS(NR2[[1]][[1]], file = "pollock/SRA_SWB.rds")
 
-##### Flat com sel Flatsel
+
+
+
+############## Generate pollock OM SWF
+############## Profile by lambda Index
 args <- get_pollock_flatsel(h = 0.81)
 setup(6)
 sfExport(list = c("args", "eval_retro"))
@@ -187,212 +191,3 @@ NR3 <- lapply(10, eval_retro, type = "I_sd", args = args)
 saveRDS(NR3[[1]][[1]], file = "pollock/SRA_NR3.rds")
 
 
-
-############## Profile by lambda fishery CAA
-CAA_mult <- seq(0.25, 5, 0.25)
-CAA_profile <- sfClusterApplyLB(CAA_mult, eval_retro, type = "CAA_mult", args = args)
-rho <- calc_rho(CAA_profile)
-png("pollock/retro_CAA_lambda.png", width = 4, height = 4, units = "in", res = 400)
-plot(CAA_mult, rho, typ = "o", xlab = "Fishery age comps lambda", ylab = "SSB Mohn's rho")
-dev.off()
-
-
-# Catch multiplier - commercial
-#C_mult <- seq(0.25, 5, 0.25)
-#C_mult_5 <- sfClusterApplyLB(C_mult, eval_retro, type = "catch_com", args = args, years = 45:49)
-#C_mult_10 <- sfClusterApplyLB(C_mult, eval_retro, type = "catch_com", args = args, years = 39:49)
-#C_mult_15 <- sfClusterApplyLB(C_mult, eval_retro, type = "catch_com", args = args, years = 35:49)
-#
-#com_base <- lapply(list(C_mult_5, C_mult_10, C_mult_15), calc_rho)
-#plot(C_mult_15[[20]][[1]], retro = C_mult_15[[20]][[2]], compare = FALSE)
-
-
-
-#C_mult_5 <- sfClusterApplyLB(C_mult, eval_retro, type = "catch_com", args = args, years = 1:5)
-#C_mult_10 <- sfClusterApplyLB(C_mult, eval_retro, type = "catch_com", args = args, years = 1:10)
-#C_mult_15 <- sfClusterApplyLB(C_mult, eval_retro, type = "catch_com", args = args, years = 1:15)
-#
-#com_base <- lapply(list(C_mult_5, C_mult_10, C_mult_15), calc_rho)
-
-
-#C_mult_5 <- sfClusterApplyLB(C_mult, eval_retro, type = "catch_rec", args = args, years = 45:49)
-#C_mult_10 <- sfClusterApplyLB(C_mult, eval_retro, type = "catch_rec", args = args, years = 39:49)
-#C_mult_15 <- sfClusterApplyLB(C_mult, eval_retro, type = "catch_rec", args = args, years = 35:49)
-
-# The right number of positive and negative peels to get mean rho = 0
-#rec_base <- lapply(list(C_mult_5, C_mult_10, C_mult_15), calc_rho)
-#plot(C_mult_10[[17]][[1]], retro = C_mult_10[[17]][[2]], compare = FALSE)
-
-
-# I multiplier
-I_mult <- seq(0.5, 5, 0.25)
-I_mult_5 <- sfClusterApplyLB(I_mult, eval_retro, type = "I_mult", args = args, years = 45:49)
-I_mult_10 <- sfClusterApplyLB(I_mult, eval_retro, type = "I_mult", args = args, years = 39:49)
-I_mult_15 <- sfClusterApplyLB(I_mult, eval_retro, type = "I_mult", args = args, years = 35:49)
-
-late_base <- lapply(list(I_mult_5, I_mult_10, I_mult_15), calc_rho)
-plot(I_mult_5[[11]][[1]], retro = I_mult_5[[11]][[2]], file = "pollock_flatcomsel_noret", 
-     title = "ASAP3, Imult 3 2014-2018", dir = "pollock", 
-     s_name = c("NEFSCspring", "NEFSCfall"), f_name = c("Commercial", "Recreational"))
-saveRDS(I_mult_5[[11]][[1]], file = "pollock/pollock_flatcomsel_noret.rds")
-
-png("pollock/pollock_ret.png", height = 6, width = 5, units = 'in', res = 400)
-matplot(I_mult, do.call(cbind, late_base), typ = "o", pch = 16, xlab = "Index multiplier", 
-        ylab = "SSB Mohn's rho")
-abline(h = 0, lty = 3)
-legend("topright", c("2014-2018", "2009-2018", "2004-2018"), col = 1:3, lty = 1:3, pch = 16)
-dev.off()
-
-
-M_mult <- seq(0.25, 4, 0.25)
-M_mult_5 <- sfClusterApplyLB(M_mult, eval_retro, type = "M_mult", args = args, years = 45:49)
-M_mult_10 <- sfClusterApplyLB(M_mult, eval_retro, type = "M_mult", args = args, years = 39:49)
-
-M_base <- lapply(list(M_mult_5, M_mult_10), calc_rho)
-plot(M_mult_10[[6]][[1]], retro = M_mult_10[[6]][[2]], file = "pollock_flatcomsel_noret2", 
-     title = "ASAP3 M = 0.3 2009-2018", dir = "pollock", 
-     s_name = c("NEFSCspring", "NEFSCfall"), f_name = c("Commercial", "Recreational"))
-saveRDS(M_mult_10[[6]][[1]], file = "pollock/pollock_flatcomsel_noret2.rds")
-
-png("pollock/pollock_ret2.png", height = 6, width = 5, units = 'in', res = 400)
-matplot(M_mult * 0.2, do.call(cbind, M_base), typ = "o", pch = 16, xlab = "M", 
-        ylab = "SSB Mohn's rho")
-abline(h = 0, lty = 3)
-legend("topright", c("2014-2018", "2009-2018"), col = 1:3, lty = 1:3, pch = 16)
-dev.off()
-
-
-
-
-#### I mult
-png("pollock/pollock_ret3.png", height = 6, width = 5, units = 'in', res = 400)
-I_mult_5 <- sfClusterApplyLB(I_mult, eval_retro, type = "I_mult", args = args, years = 45:49)
-I_mult_10 <- sfClusterApplyLB(I_mult, eval_retro, type = "I_mult", args = args, years = 39:49)
-I_mult_15 <- sfClusterApplyLB(I_mult, eval_retro, type = "I_mult", args = args, years = 35:49)
-
-late_base <- lapply(list(I_mult_5, I_mult_10, I_mult_15), calc_rho)
-plot(I_mult_5[[15]][[1]], retro = I_mult_5[[15]][[2]], file = "pollock_flatcomsel_noret3", 
-     title = "ASAP3 flatsel Imult 4 2014-2018", dir = "pollock", 
-     s_name = c("NEFSCspring", "NEFSCfall"), f_name = c("Commercial", "Recreational"))
-saveRDS(I_mult_5[[1]][[1]], file = "pollock/pollock_flatcomsel_noret3.rds")
-
-png("pollock/pollock_ret3.png", height = 6, width = 5, units = 'in', res = 400)
-matplot(I_mult, do.call(cbind, late_base), typ = "o", pch = 16, xlab = "Index multiplier", 
-        ylab = "SSB Mohn's rho")
-abline(h = 0, lty = 3)
-legend("topright", c("2014-2018", "2009-2018", "2004-2018"), col = 1:3, lty = 1:3, pch = 16)
-dev.off()
-
-
-# M mult
-M_mult <- seq(0.25, 4, 0.25)
-M_mult_5 <- sfClusterApplyLB(M_mult, eval_retro, type = "M_mult", args = args, years = 45:49)
-M_mult_10 <- sfClusterApplyLB(M_mult, eval_retro, type = "M_mult", args = args, years = 39:49)
-
-M_base <- lapply(list(M_mult_5, M_mult_10), calc_rho)
-png("pollock/pollock_ret4.png", height = 6, width = 5, units = 'in', res = 400)
-matplot(M_mult * 0.2, do.call(cbind, M_base), typ = "o", pch = 16, xlab = "M", 
-        ylab = "SSB Mohn's rho")
-abline(h = 0, lty = 3)
-legend("topright", c("2014-2018", "2009-2018"), col = 1:3, lty = 1:3, pch = 16)
-dev.off()
-
-M_noret <- eval_retro(0.33/0.2, type = "M_mult", args = args, years = 39:49)
-
-plot(M_noret[[1]], retro = M_noret[[2]], file = "pollock_flatcomsel_noret4", 
-     title = "ASAP3 M = 0.33 2009-2018", dir = "pollock", 
-     s_name = c("NEFSCspring", "NEFSCfall"), f_name = c("Commercial", "Recreational"))
-saveRDS(M_noret[[1]], file = "pollock/pollock_flatcomsel_noret4.rds")
-
-# Base with combination of M mult and I mult
-I_mult <- seq(0.5, 5, 0.25)
-combo <- lapply(I_mult, function(x) c(x, 1.25) %>% structure(names = c("I_mult", "M_mult")))
-
-combo_mult <- sfClusterApplyLB(combo, eval_retro, type = c("I_mult", "M_mult"), 
-                               args = args, years = list(45:49, 39:49))
-
-plot(I_mult, calc_rho(combo_mult))
-abline(h = 0, lty = 3)
-
-plot(combo_mult[[6]][[1]], retro = combo_mult[[6]][[2]], file = "pollock_flatcomsel_noret5", 
-     title = "ASAP3, Imult 1.75 2014-2018, M = 0.25 2009-2018", dir = "pollock", 
-     s_name = c("NEFSCspring", "NEFSCfall"), f_name = c("Commercial", "Recreational"))
-saveRDS(combo_mult[[6]][[1]], file = "pollock/pollock_flatcomsel_noret5.rds")
-
-png("pollock/pollock_ret5.png", height = 6, width = 5, units = 'in', res = 400)
-plot(I_mult, calc_rho(combo_mult), typ = "o", pch = 16, xlab = "Index multiplier", 
-        ylab = "SSB Mohn's rho")
-abline(h = 0, lty = 3)
-dev.off()
-
-
-
-# Compare
-res <- readRDS("pollock/pollock_base.rds")
-res2 <- readRDS("pollock/pollock_flatsel.rds")
-res3 <- readRDS("pollock/pollock_flatcomsel_noret.rds")
-res4 <- readRDS("pollock/pollock_flatcomsel_noret2.rds")
-res5 <- readRDS("pollock/pollock_flatcomsel_noret3.rds")
-res6 <- readRDS("pollock/pollock_flatcomsel_noret4.rds")
-res7 <- readRDS("pollock/pollock_flatcomsel_noret5.rds")
-
-
-compare_SRA(res, res2, res3, res4, res5, res6, res7,
-            filename = "compare_pollock_ret", dir = "pollock", title = "ASAP3 pollock comparison",
-            s_name = c("NEFSCspring", "NEFSCfall"), f_name = c("Commercial", "Recreational"),
-            scenario = list(names = c("Base", "FlatSel", 
-                                      "Base_FlatComSel_Imult", "Base_FlatComSel_Mmult",
-                                      "FlatSel_FlatComSel_Imult", "FlatSel_FlatComSel_Mmult",
-                                      "Base_FlatComSel_Combo")))
-
-
-
-SSB <- cbind %>% do.call(lapply(list(res, res2, res3, res4, res5), function(x) x@SSB[1, ]))
-
-png("pollock/SSB.png", height = 4, width = 5, units = "in", res = 400)
-par(mar = c(5, 4, 1, 1))
-matplot(1970:2019, SSB, xlab = "Year", type = "l", lty = 1, lwd = 2, ylim = c(0, 6e5))
-abline(h = 0, col = "grey")
-legend("top", c("Base", "FlatSel", "NR1", "NR2", "NR3"), pch = 16, col = 1:5)
-dev.off()
-
-RR <- cbind %>% do.call(lapply(list(res, res2, res3, res4, res5), function(x) x@Misc[[1]]$R))
-
-png("pollock/Recruits.png", height = 4, width = 5, units = "in", res = 400)
-par(mar = c(5, 4, 1, 1))
-matplot(1970:2019, RR, ylab = "Recruitment", xlab = "Year", type = "l", lty = 1, lwd = 2, ylim = c(0, 1.1e5))
-abline(h = 0, col = "grey")
-legend("topleft", c("Base", "FlatSel", "NR1", "NR2", "NR3"), pch = 16, col = 1:5)
-dev.off()
-
-setup(3)
-rr <- sfLapply(list(res3, res4, res5), retrospective, nyr = 7, figure = FALSE)
-
-png("pollock/rho.png", height = 4, width = 6.5, units = "in", res = 400)
-par(mfcol = c(2, 3), mar = c(4, 4, 1, 1))
-for(i in 1:3) {
-  matplot(rr[[i]]@TS[, , 1] %>% t(), type = 'l', col = gplots::rich.colors(7), lty = 1, ylim = c(0, 1), 
-          xlab = "Year", ylab = "Commerical F")
-  legend("topleft", c(paste0("NR", i), latex2exp::TeX(paste0("$\\rho = ", summary(rr[[i]])[1,1], "$"))), bty = "n")
-  matplot(rr[[i]]@TS[, , 3] %>% t(), type = 'l', col = gplots::rich.colors(7), lty = 1, ylim = c(0, 6e5), 
-          xlab = "Year", ylab = "SSB")
-  legend("topleft", c(paste0("NR", i), latex2exp::TeX(paste0("$\\rho = ", summary(rr[[i]])[2,1], "$"))), bty = "n")
-}
-dev.off()
-
-
-setup(3)
-rr <- sfLapply(list(res, res2), retrospective, nyr = 7, figure = FALSE)
-EM <- c("Base", "FlatSel")
-
-png("pollock/rho_EM.png", height = 4, width = 2 * 6.5 / 3, units = "in", res = 400)
-par(mfcol = c(2, 2), mar = c(4, 4, 1, 1))
-for(i in 1:2) {
-  matplot(rr[[i]]@TS[, , 1] %>% t(), type = 'l', col = gplots::rich.colors(7), lty = 1, ylim = c(0, 1), 
-          xlab = "Year", ylab = "Commerical F")
-  legend("topleft", c(EM[i], latex2exp::TeX(paste0("$\\rho = ", summary(rr[[i]])[1,1], "$"))), bty = "n")
-  matplot(rr[[i]]@TS[, , 3] %>% t(), type = 'l', col = gplots::rich.colors(7), lty = 1, ylim = c(0, 6e5), 
-          xlab = "Year", ylab = "SSB")
-  legend("topleft", c(EM[i], latex2exp::TeX(paste0("$\\rho = ", summary(rr[[i]])[2,1], "$"))), bty = "n")
-}
-dev.off()

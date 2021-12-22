@@ -58,6 +58,7 @@ eval_retro <- function(x, type = c("catch_mult", "M1", "M2", "oldMinc", "youngMi
   return(c(res, ret))
 }
 
+############### Generate cod operating model MC
 ############### Catch multiplier for M 0.2
 args <- get_cod_M02(0.81)
 setup(6)
@@ -89,9 +90,10 @@ plot(ret_cat_mult[[1]][[5]][[1]], retro = ret_cat_mult[[1]][[5]][[2]], file = "r
 args <- get_cod_M02(100)
 args$OM@h <- rep(0.81, 2)
 NR1 <- lapply(2.25, eval_retro, type = "catch_mult", years = 28:37, args = args)
-saveRDS(NR1[[1]][[1]], file = "GoM_cod/SRA_NR1.rds")
+saveRDS(NR1[[1]][[1]], file = "GoM_cod/SRA_MC.rds")
 
 
+############### Generate cod operating model MCIM
 ############### Catch multiplier for MRAMP
 args <- get_cod_MRAMP(0.81)
 setup(6)
@@ -122,68 +124,11 @@ plot(ret_cat_mult[[1]][[6]][[1]], retro = ret_cat_mult[[1]][[6]][[2]], file = "r
 # Generate the OM
 args <- get_cod_MRAMP(h = 0.81)
 NR2 <- lapply(1.25, eval_retro, type = "catch_mult", years = 28:37, args = args)
-saveRDS(NR2[[1]][[1]], file = "GoM_cod/SRA_NR2.rds")
+saveRDS(NR2[[1]][[1]], file = "GoM_cod/SRA_MCIM.rds")
 
 
-############### MRAMP only for older ages - doesn't work
-# args <- get_cod_MRAMP(h = 0.81)
-# 
-# eval2 <- function(x, args) eval_retro(1, type = "oldMinc", args = args, age = x) 
-# setup(6)
-# sfExport(list = c("args", "eval_retro"))
-# age_inc <- 2:9
-# ret_Mage <- sfClusterApplyLB(age_inc, eval2, args = args)
-# 
-# rho <- vapply(ret_Mage, function(xx) summary(xx[[2]])[2, 1], numeric(1))
-# plot(age_inc, rho)
 
-############### MRAMP only for younger ages
-args <- get_cod_MRAMP(h = 0.81)
-eval2 <- function(x, args) eval_retro(1, type = "youngMinc", args = args, age = x) 
-setup(6)
-sfExport(list = c("args", "eval_retro"))
-age_inc <- 2:9
-ret_Mage <- sfClusterApplyLB(age_inc, eval2, args = args)
-
-rho <- vapply(ret_Mage, function(xx) summary(xx[[2]])[2, 1], numeric(1))
-plot(age_inc, rho)
-
-# It's promising but let's now try increase in juvenile M with catch underreporting
-c_mult <- seq(1, 3, 0.25)
-ret_cm <- sfClusterApplyLB(c_mult, eval_retro, type = c("catch_mult", "youngMinc"), 
-                           years = 28:37, args = args, age = 4)
-
-rho <- vapply(ret_cm, function(xx) summary(xx[[2]])[2, 1], numeric(1))
-plot(c_mult, rho)
-abline(h = 0)
-
-plot(ret_cm[[3]][[1]], retro = ret_cm[[3]][[2]])
-
-
-########### Catch multiplier with MRAMP to only 0.3
-args <- get_cod_MRAMP(h = 0.81)
-
-setup(6)
-sfExport(list = "args")
-
-c_mult <- seq(1.25, 3, 0.25)
-ret_M3 <- sfClusterApplyLB(c_mult, eval_retro, type = c("maxRAMP", "catch_mult"), maxM = 0.3,
-                           years = 28:37, args = args)
-
-rho <- vapply(ret_M3, function(xx) summary(xx[[2]])[2, 1], numeric(1))
-plot(c_mult, rho)
-abline(h = 0)
-plot(ret_M3[[5]][[1]], retro = ret_M3[[5]][[2]])
-
-
-############# M multiplier for MRAMP
-#max_Mramp <- seq(0.65, 0.75, 0.01)
-#ret_M <- sfClusterApplyLB(max_Mramp, eval_retro, type = "M1", args = args)
-#eval_retro(5, type = "M2", args = args)
-#
-#rho <- vapply(ret_M, function(xx) summary(xx[[2]])[2, 1], numeric(1))
-#plot(1982:2018, args$OM@cpars$M_ageArray[1,1, 1:37], xlab = "Year", ylab = "Natural mortality", type = "o", ylim = c(0, 0.5))
-
+############### Generate cod operating model IM
 ############# M continue ramp
 args <- get_cod_MRAMP(h = 0.81)
 
@@ -214,6 +159,6 @@ plot(ret_M[[4]][[1]], retro = ret_M[[5]][[2]], file = "report/GoM_cod/NR3",
 args <- get_cod_MRAMP(nsim = 100, h = 0.81)
 sfExport(list = "args")
 NR3 <- sfClusterApplyLB(4, eval_retro, type = "M2", args = args)
-saveRDS(NR3[[1]][[1]], file = "GoM_cod/SRA_NR3.rds")
+saveRDS(NR3[[1]][[1]], file = "GoM_cod/SRA_IM.rds")
 
 
