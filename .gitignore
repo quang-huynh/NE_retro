@@ -2,8 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-ASAPexecutables
 *.pdf
 *.xlsx
-GB_haddock
-report
