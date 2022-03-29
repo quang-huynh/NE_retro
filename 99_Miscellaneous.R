@@ -34,8 +34,9 @@ b <- ggplot(TAC, aes(x = Model, y = TAC2)) + facet_wrap(~facet, ncol = 1, scales
   coord_cartesian(ylim = c(0, 1.5)) + 
   gfplot::theme_pbs() + no_legend + theme(strip.text.x = element_blank(), strip.text.y = element_blank())
 
-cowplot::plot_grid(a, b, nrow = 1)
+g <- cowplot::plot_grid(a, b, nrow = 1)
 ggsave("report/intro_figure.png", height = 3, width = 5)
+ggsave("report/intro_figure.png", g, height = 80, width = 170, dpi = 600, units = "mm")
 
 
 ###### Combine SSB and recruitment plot with both cod and pollock
@@ -47,9 +48,9 @@ cod <- local({
   
   res1 <- readRDS("GoM_cod/SRA_cod_M02.rds")
   res2 <- readRDS("GoM_cod/SRA_cod_MRAMP.rds")
-  res3 <- readRDS("GoM_cod/SRA_NR1.rds")
-  res4 <- readRDS("GoM_cod/SRA_NR2.rds")
-  res5 <- readRDS("GoM_cod/SRA_NR3.rds")
+  res3 <- readRDS("GoM_cod/SRA_MC.rds")
+  res4 <- readRDS("GoM_cod/SRA_MCIM.rds")
+  res5 <- readRDS("GoM_cod/SRA_IM.rds")
   
   Model <- data.frame(name = c("MC", "IM", "MCIM", "M02", "MRAMP"), type = c("OM", "OM", "OM", "AM", "AM"))
   SSB <- lapply(list(res3, res5, res4, res1, res2), function(x) x@SSB[1, ]) %>% do.call(cbind, .) %>% 
@@ -73,7 +74,8 @@ cod <- local({
     scale_y_continuous(labels = scales::comma, n.breaks = 5) +
     scale_linetype_manual(values = c("MC" = 1, "IM" = 1, "MCIM" = 1, "M02" = 2, "MRAMP" = 2)) +
     gfplot::theme_pbs() + no_panel_gap + legend_bottom + 
-    theme(legend.title = element_blank(), strip.placement = "outside")
+    theme(legend.title = element_blank(), strip.placement = "outside") +
+    guides(linetype = guide_legend(nrow = 2), colour = guide_legend(nrow = 2))
 })
 
 
@@ -81,9 +83,9 @@ pollock <- local({
   
   res1 <- readRDS("pollock/SRA_pollock_base.rds")
   res2 <- readRDS("pollock/SRA_pollock_flatsel.rds")
-  res3 <- readRDS("pollock/SRA_NR1.rds")
-  res4 <- readRDS("pollock/SRA_NR2.rds")
-  res5 <- readRDS("pollock/SRA_NR3.rds")
+  res3 <- readRDS("pollock/SRA_SS.rds")
+  res4 <- readRDS("pollock/SRA_SWB.rds")
+  res5 <- readRDS("pollock/SRA_SWF.rds")
   
   # SSB and R
   Model <- data.frame(name = c("SS", "SWB", "SWF", "Base", "FlatSel"), type = c("OM", "OM", "OM", "AM", "AM"))
@@ -108,10 +110,11 @@ pollock <- local({
     scale_y_continuous(labels = scales::comma, n.breaks = 5) +
     scale_linetype_manual(values = c("SS" = 1, "SWB" = 1, "SWF" = 1, "Base" = 2, "FlatSel" = 2)) +
     gfplot::theme_pbs() + no_panel_gap + legend_bottom + 
-    theme(legend.title = element_blank(), strip.placement = "outside")
+    theme(legend.title = element_blank(), strip.placement = "outside") +
+    guides(linetype = guide_legend(nrow = 2), colour = guide_legend(nrow = 2))
 })
 
 
-ggpubr::ggarrange(cod, pollock, ncol = 2)
+g <- ggpubr::ggarrange(cod, pollock, ncol = 2)
 ggsave("report/model_compare.png", height = 4, width = 8)
-
+ggsave("report/model_compare.png", g, height = 125, width = 170, dpi = 600, units = "mm")

@@ -17,7 +17,7 @@ ref_pt_plot$OM <- OM_names
 
 ######## Load MSE and update reference points
 MSE <- lapply(1:3, function(x) {
-  y <- readRDS(paste0("pollock/MSE_pollock_", OM_names[i], ".rds"))
+  y <- readRDS(paste0("pollock/MSE_pollock_", OM_names[x], ".rds"))
   
   y@OM$SSBMSY <- ref_pt_plot$SSBMSY[x]
   y@B_BMSY <- y@SSB/y@OM$SSBMSY
@@ -61,21 +61,25 @@ resOM_label <- plot_OM(MSE, MPs = MPs, 0.10, 0.90, yfilter = 10, OM_names = OM_n
 SSB_label <- resOM_label[[2]] %>% 
   mutate(label = round(med, 2) %>% format())
 
-ggplot(resOM[[2]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(OM ~ MP, scales = "free_y") + 
+g <- ggplot(resOM[[2]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(OM ~ MP, scales = "free_y") + 
   geom_hline(yintercept = 0, col = "white") + 
   geom_vline(xintercept = MSE[[1]]@OM$CurrentYr[1], linetype = 3) +
   geom_ribbon(fill = "grey80") + geom_line(size = 0.9) + 
   geom_text(data = SSB_label, inherit.aes = FALSE, x = Inf, y = Inf, hjust = 1.1, vjust = 1.1,
             aes(label = label)) +
-  geom_label(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, colour = NA, hjust = 0.2, vjust = 0.9,
+  geom_label(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, colour = NA, 
+             label.padding = unit(0.25, "lines"), label.r = unit(0, "lines"), label.size = 0,
+             hjust = 0.2, vjust = 0.9, size = 2,
              aes(label = label)) +
-  geom_text(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, 
+  geom_text(data = OM_letters, inherit.aes = FALSE, x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, size = 3,
             aes(label = label)) +
   geom_hline(data = ref_pt_plot, aes(yintercept = SSBMSY), linetype = 2) +
   geom_hline(data = ref_pt_plot, aes(yintercept = 0.5 * SSBMSY), linetype = 2) +
   ylab("SSB") + scale_y_continuous(labels = scales::comma, expand = c(0.01, 0.01)) +
-  gfplot::theme_pbs() + no_panel_gap
+  gfplot::theme_pbs() + no_panel_gap +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
 ggsave("report/pollock/MSE_OM_SSB.png", height = 3.5, width = 8.5)
+ggsave("report/pollock/MSE_OM_SSB.png", g, height = 80, width = 170, dpi = 600, units = "mm")
 
 # Catch
 ggplot(resOM[[3]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(OM ~ MP, scales = "free_y") + 
@@ -172,7 +176,7 @@ ypm <- Map(Yield_fn, MSE = MSE, OM_names = OM_names, MoreArgs = list(MPs = MPs))
          label = ifelse(PB50 > 0.99, ">99", ifelse(PB50 < 0.01, "<1", round(100 * PB50, 0))) %>% paste0(MP, " (", ., "%)"),
          PNOF = 100 * PNOF)
 
-ggplot(ypm, aes(PNOF, MeanC, colour = AM)) + facet_grid(OM ~ ., scales = "free_y") + 
+g <- ggplot(ypm, aes(PNOF, MeanC, colour = AM)) + facet_grid(OM ~ ., scales = "free_y") + 
   geom_point(aes(shape = AM), size = 2) + 
   ggrepel::geom_text_repel(aes(label = label), size = 2.5) + 
   geom_text(data = data.frame(OM = c("SS", "SWB", "SWF"), txt = c("(a)", "(b)", "(c)")),
@@ -184,11 +188,10 @@ ggplot(ypm, aes(PNOF, MeanC, colour = AM)) + facet_grid(OM ~ ., scales = "free_y
   coord_cartesian(xlim = c(50, 100), ylim = c(10e3, 30e3)) + 
   xlab("PNOF (%)") + ylab("Observed short-term catch") + 
   scale_y_continuous(labels = scales::comma) +
-  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom +
+  guides(label = "none")
 ggsave("report/pollock/pm_tradeoff.png", width = 3, height = 5.5)
-
-
-
+ggsave("report/pollock/pm_tradeoff.png", g, width = 85, height = 140, dpi = 600, units = "mm")
 
 
 
@@ -234,11 +237,11 @@ class <- Map(function(x, y, MP) {
 LDA_letters <- expand.grid(Year = Yind, MP = MPs)
 LDA_letters$label <- paste0("(", letters[1:nrow(LDA_letters)], ")")
 
-ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
+g <- ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
          mutate(MP = factor(MP, levels = MPs)), aes(PMat_1_mu, SSB_rho)) + 
   facet_grid(Year ~ MP) + geom_hline(yintercept = 0, linetype = 3) + geom_point(aes(colour = OM, shape = OM), alpha = 0.6) +
   geom_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = SWF)) + 
-  geom_text(data = misclass, aes(label = class_correct), x = Inf, y = Inf, vjust = 1.1, hjust = 1.1) +
+  geom_text(data = class, aes(label = class_correct), x = Inf, y = Inf, vjust = 1.1, hjust = 1.1) +
   geom_text(data = LDA_letters, inherit.aes = FALSE, x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, 
             aes(label = label)) +
   coord_cartesian(xlim = c(-0.4, 0.1), ylim = c(-0.25, 1)) + labs(x = expression(P[mat]), y = expression(rho[SSB])) +
@@ -246,7 +249,7 @@ ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical(
   scale_shape_manual(values = c("SS" = 16, "SWB" = 1, "SWF" = 4)) + 
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/pollock/indicators_LDA2_3y.png", width = 6.5, height = 4)
-
+ggsave("report/pollock/indicators_LDA2_3y.png", g, height = 100, width = 170, dpi = 600, units = "mm")
 
 
 #### Plot recruitment

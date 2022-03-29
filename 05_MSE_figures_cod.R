@@ -20,7 +20,7 @@ ref_pt_plot$type <- rep(c("old", "new"), each = 3)
 
 ######## Load MSE and update reference points
 MSE <- lapply(1:3, function(x) {
-  y <- readRDS(paste0("GoM_cod/MSE_cod_", OM_names[i], ".rds"))
+  y <- readRDS(paste0("GoM_cod/MSE_cod_", OM_names[x], ".rds"))
   
   y@OM$SSBMSY <- filter(ref_pt_plot, type == 'new')$SSBMSY[x]
   y@B_BMSY <- y@SSB/y@OM$SSBMSY
@@ -63,7 +63,7 @@ resOM_label <- plot_OM(MSE[OM_order], MPs = MPs, 0.10, 0.90, yfilter = 10, OM_na
 SSB_label <- resOM_label[[2]] %>% 
   mutate(label = round(med, 2) %>% format())
 
-ggplot(resOM[[2]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(factor(OM) ~ MP, scales = "free_y") +  
+g <- ggplot(resOM[[2]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(factor(OM) ~ MP, scales = "free_y") +  
   geom_hline(yintercept = 0, col = "white") + 
   geom_vline(xintercept = MSE[[1]]@OM$CurrentYr[1], linetype = 3) +
   geom_ribbon(fill = "grey80") + geom_line(size = 0.9) + 
@@ -76,8 +76,10 @@ ggplot(resOM[[2]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(fac
   geom_hline(data = ref_pt_plot[4:6, ], aes(yintercept = SSBMSY), linetype = 2) +
   geom_hline(data = ref_pt_plot[4:6, ], aes(yintercept = 0.5 * SSBMSY), linetype = 2) +
   ylab("SSB") + scale_y_continuous(labels = scales::comma, expand = c(0.01, 0.01)) +
-  gfplot::theme_pbs() + no_panel_gap
+  gfplot::theme_pbs() + no_panel_gap + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
 ggsave("report/GoM_cod/MSE_OM_SSB.png", height = 3.5, width = 8.5)
+ggsave("report/GoM_cod/MSE_OM_SSB.png", g, height = 80, width = 170, dpi = 600, units = "mm")
 
 # Catch
 ggplot(resOM[[3]], aes(Year, y = med, ymin = low, ymax = high)) + facet_grid(factor(OM) ~ MP, scales = "free_y") + 
@@ -175,7 +177,7 @@ ypm <- Map(Yield_fn, MSE = MSE[OM_order], OM_names = OM_names[OM_order], Cbias =
          label = ifelse(PB50 > 0.99, ">99", ifelse(PB50 < 0.01, "<1", round(100 * PB50, 0))) %>% paste0(MP, " (", ., "%)"),
          PNOF = 100 * PNOF)
 
-ggplot(ypm, aes(PNOF, MeanC, label = label, colour = AM)) + facet_grid(OM~., scales = "free_y") + 
+g <- ggplot(ypm, aes(PNOF, MeanC, label = label, colour = AM)) + facet_grid(OM~., scales = "free_y") + 
   geom_point(aes(shape = AM), size = 2) + 
   ggrepel::geom_text_repel(aes(label = label), size = 2.5) + 
   geom_text(data = data.frame(OM = OM_names[OM_order], txt = c("(a)", "(b)", "(c)")),
@@ -185,9 +187,10 @@ ggplot(ypm, aes(PNOF, MeanC, label = label, colour = AM)) + facet_grid(OM~., sca
   scale_colour_manual(values = c("blue", "red", "#13F240FF", "black")) + 
   coord_cartesian(ylim = c(0, 1.1e3)) + xlab("PNOF (%)") + ylab("Observed short-term catch") +
   scale_y_continuous(breaks = seq(0, 1000, 250)) +
-  gfplot::theme_pbs() + no_panel_gap + legend_bottom
+  gfplot::theme_pbs() + no_panel_gap + legend_bottom +
+  guides(label = "none")
 ggsave("report/GoM_cod/pm_tradeoff.png", width = 3, height = 5.5)
-
+ggsave("report/GoM_cod/pm_tradeoff.png", g, width = 85, height = 140, dpi = 600, units = "mm")
 
 
 
@@ -240,7 +243,7 @@ class <- Map(function(x, y, MP) {
 LDA_letters <- expand.grid(Year = Yind, MP = MPs)
 LDA_letters$label <- paste0("(", letters[1:nrow(LDA_letters)], ")")
 
-ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
+g <- ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical()) %>%
   mutate(MP = factor(MP, levels = MPs)), aes(PMat_1_mu, SSB_rho)) + 
   facet_grid(Year ~ MP) + geom_hline(yintercept = 0, linetype = 3) + geom_point(aes(colour = OM, shape = OM), alpha = 0.6) +
   geom_contour(data = rr_pred2, breaks = 0.5, colour = "black", aes(z = MC)) + 
@@ -252,7 +255,7 @@ ggplot(indicators_cast %>% filter(match(Year, Yind, nomatch = 0) %>% as.logical(
   scale_shape_manual(values = c("MC" = 16, "IM" = 1, "MCIM" = 4)) +
   gfplot::theme_pbs() + no_panel_gap + legend_bottom
 ggsave("report/GoM_cod/indicators_LDA2_3y.png", width = 6.5, height = 4)
-
+ggsave("report/GoM_cod/indicators_LDA2_3y.png", g, height = 100, width = 170, dpi = 600, units = "mm")
 
 
 
